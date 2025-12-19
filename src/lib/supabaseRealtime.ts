@@ -30,7 +30,7 @@ class SupabasePriceEngine {
     // Listen for price broadcasts
     this.channel
       .on('broadcast', { event: 'price_update' }, (payload) => {
-        const { prices, timestamp } = payload.payload as {
+        const { prices } = payload.payload as {
           prices: Record<string, number>
           timestamp: number
         }
