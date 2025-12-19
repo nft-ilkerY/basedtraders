@@ -67,8 +67,14 @@ export default function TradingInterface({ profile, isLoggedIn }: TradingInterfa
     // Start price engine first
     priceEngine.start()
 
+    // Track if we've initialized to unsubscribe after first price
+    let initialized = false
+    let unsubscribeFunc: (() => void) | null = null
+
     // Subscribe to get the first real price, then create history
-    const unsubscribe = priceEngine.subscribe(selectedToken.symbol, (firstRealPrice) => {
+    unsubscribeFunc = priceEngine.subscribe(selectedToken.symbol, (firstRealPrice) => {
+      if (initialized) return // Only run once
+
       setCurrentPrice(firstRealPrice)
 
       // Create realistic price history working backwards from current price
@@ -87,10 +93,20 @@ export default function TradingInterface({ profile, isLoggedIn }: TradingInterfa
 
       setPriceHistory(history)
       setHistoryLoaded(true)
+      initialized = true
 
       // Unsubscribe after getting first price
-      unsubscribe()
+      if (unsubscribeFunc) {
+        unsubscribeFunc()
+      }
     })
+
+    // Cleanup on unmount or token change
+    return () => {
+      if (unsubscribeFunc && !initialized) {
+        unsubscribeFunc()
+      }
+    }
   }, [selectedToken])
 
   // Initialize player when Farcaster connects
