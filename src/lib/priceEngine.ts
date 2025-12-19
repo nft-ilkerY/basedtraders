@@ -1,15 +1,16 @@
-// Client-side Price Engine - Hybrid: Real prices for crypto, simulated for game tokens
+// Client-side Price Engine - Hybrid: Real-time prices for crypto via WebSocket, simulated for game tokens
 class PriceEngine {
   private tokenPrices: Map<string, number> = new Map() // symbol -> price
   private listeners: Map<string, Set<(price: number) => void>> = new Map() // symbol -> callbacks
   private intervalId: number | null = null
-  private cryptoFetchInterval: number | null = null
+  private binanceWs: WebSocket | null = null
   private volatility: number = 0.004
   private trend: number = 0
   private trendChangeCounter: number = 0
 
-  // Game tokens (simulated) - all others are real crypto fetched from Binance
+  // Game tokens (simulated) - all others are real crypto from Binance WebSocket
   private gameTokens = new Set(['BATR'])
+  private cryptoSymbols = ['btcusdt', 'ethusdt', 'solusdt']
 
   constructor() {
     // Initialize with default prices
@@ -18,8 +19,8 @@ class PriceEngine {
     this.tokenPrices.set('ETH', 3000)
     this.tokenPrices.set('SOL', 100)
 
-    // Fetch real prices immediately
-    this.fetchRealCryptoPrices()
+    // Fetch initial real prices
+    this.fetchInitialCryptoPrices()
   }
 
   start() {
@@ -30,19 +31,18 @@ class PriceEngine {
       this.updateGameTokenPrices()
     }, 1000)
 
-    // Fetch real crypto prices every 5 seconds
-    this.cryptoFetchInterval = window.setInterval(() => {
-      this.fetchRealCryptoPrices()
-    }, 5000)
+    // Connect to Binance WebSocket for real-time crypto prices
+    this.connectBinanceWebSocket()
   }
 
-  private async fetchRealCryptoPrices() {
+  private async fetchInitialCryptoPrices() {
     try {
-      // Fetch from Binance API (public, no rate limit for simple requests)
+      // Fetch initial prices from Binance REST API
       const symbols = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT']
       const promises = symbols.map(symbol =>
         fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`)
           .then(res => res.json())
+          .catch(() => null)
       )
 
       const results = await Promise.all(promises)
@@ -51,14 +51,59 @@ class PriceEngine {
         if (data && data.symbol && data.price) {
           const symbol = data.symbol.replace('USDT', '')
           const price = parseFloat(data.price)
-
           this.tokenPrices.set(symbol, price)
           this.notifyListenersForToken(symbol)
         }
       })
     } catch (error) {
-      console.error('Failed to fetch crypto prices:', error)
-      // Keep using last known prices if fetch fails
+      console.error('Failed to fetch initial crypto prices:', error)
+    }
+  }
+
+  private connectBinanceWebSocket() {
+    try {
+      // Binance WebSocket stream for multiple symbols
+      // Format: btcusdt@ticker/ethusdt@ticker/solusdt@ticker
+      const streams = this.cryptoSymbols.map(s => `${s}@ticker`).join('/')
+      const wsUrl = `wss://stream.binance.com:9443/stream?streams=${streams}`
+
+      this.binanceWs = new WebSocket(wsUrl)
+
+      this.binanceWs.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+
+          if (data.data && data.data.s && data.data.c) {
+            // data.data.s = symbol (e.g., "BTCUSDT")
+            // data.data.c = current price
+            const symbol = data.data.s.replace('USDT', '')
+            const price = parseFloat(data.data.c)
+
+            if (price > 0) {
+              this.tokenPrices.set(symbol, price)
+              this.notifyListenersForToken(symbol)
+            }
+          }
+        } catch (error) {
+          console.error('WebSocket message parse error:', error)
+        }
+      }
+
+      this.binanceWs.onerror = (error) => {
+        console.error('Binance WebSocket error:', error)
+      }
+
+      this.binanceWs.onclose = () => {
+        console.log('Binance WebSocket closed, reconnecting in 5s...')
+        // Reconnect after 5 seconds
+        setTimeout(() => {
+          if (this.intervalId !== null) {
+            this.connectBinanceWebSocket()
+          }
+        }, 5000)
+      }
+    } catch (error) {
+      console.error('Failed to connect to Binance WebSocket:', error)
     }
   }
 
@@ -111,9 +156,9 @@ class PriceEngine {
       clearInterval(this.intervalId)
       this.intervalId = null
     }
-    if (this.cryptoFetchInterval) {
-      clearInterval(this.cryptoFetchInterval)
-      this.cryptoFetchInterval = null
+    if (this.binanceWs) {
+      this.binanceWs.close()
+      this.binanceWs = null
     }
   }
 
