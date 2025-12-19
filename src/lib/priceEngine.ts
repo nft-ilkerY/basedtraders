@@ -8,9 +8,7 @@ class PriceEngine {
   private trend: number = 0
   private trendChangeCounter: number = 0
 
-  // Real crypto tokens (fetch from Binance)
-  private realCryptos = new Set(['BTC', 'ETH', 'SOL'])
-  // Game tokens (simulated)
+  // Game tokens (simulated) - all others are real crypto fetched from Binance
   private gameTokens = new Set(['BATR'])
 
   constructor() {
