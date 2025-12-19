@@ -5,7 +5,7 @@ import cors from 'cors'
 import path from 'path'
 import fs from 'fs'
 import { fileURLToPath } from 'url'
-import db from './db.js'
+import db, { supabase } from './db.js'
 import { calculateRank } from './rankSystem.js'
 import { cryptoPriceFetcher } from './cryptoPrice.js'
 // import { mintAchievementNFT } from './nftMinter.js' // DISABLED - Achievements coming soon
@@ -385,78 +385,146 @@ app.get('/api/positions/:fid', (req, res) => {
   res.json(positions)
 })
 
-app.get('/api/positions/:fid/open', (req, res) => {
-  const positions = db.prepare(`
-    SELECT p.*, t.symbol as token_symbol
-    FROM positions p
-    LEFT JOIN tokens t ON p.token_id = t.id
-    WHERE p.player_fid = ? AND p.closed_at IS NULL
-    ORDER BY p.opened_at DESC
-  `).all(req.params.fid)
-  res.json(positions)
-})
+app.get('/api/positions/:fid/open', async (req, res) => {
+  try {
+    // Get positions from Supabase
+    const { data: positions, error: posError } = await supabase
+      .from('positions')
+      .select('*')
+      .eq('player_fid', req.params.fid)
+      .is('closed_at', null)
+      .order('opened_at', { ascending: false })
 
-app.get('/api/positions/:fid/closed', (req, res) => {
-  const positions = db.prepare(`
-    SELECT p.*, t.symbol as token_symbol
-    FROM positions p
-    LEFT JOIN tokens t ON p.token_id = t.id
-    WHERE p.player_fid = ? AND p.closed_at IS NOT NULL
-    ORDER BY p.closed_at DESC
-  `).all(req.params.fid)
-  res.json(positions)
-})
+    if (posError) throw posError
 
-app.get('/api/player/:fid/stats', (req, res) => {
-  const fid = req.params.fid
-  const player = db.prepare('SELECT * FROM players WHERE farcaster_fid = ?').get(fid) as any
+    // Get token symbols
+    const { data: tokens, error: tokenError } = await supabase
+      .from('tokens')
+      .select('id, symbol')
 
-  if (!player) {
-    return res.json({
-      farcaster_fid: parseInt(fid),
-      cash: 250,
-      high_score: 250,
-      created_at: Date.now(),
-      total_trades: 0,
-      winning_trades: 0,
-      losing_trades: 0,
-      total_volume: 0,
-      biggest_win: 0,
-      biggest_loss: 0,
-      avg_hold_time: 0,
-      total_pnl: 0
-    })
+    if (tokenError) throw tokenError
+
+    // Map token_id to symbol
+    const tokenMap = new Map(tokens?.map(t => [t.id, t.symbol]) || [])
+
+    // Add token_symbol to each position
+    const positionsWithSymbols = positions?.map(p => ({
+      ...p,
+      token_symbol: tokenMap.get(p.token_id) || 'BATR'
+    })) || []
+
+    res.json(positionsWithSymbols)
+  } catch (error: any) {
+    console.error('Error fetching open positions:', error)
+    res.status(500).json({ error: error.message })
   }
+})
 
-  const closedPositions = db.prepare('SELECT * FROM positions WHERE player_fid = ? AND closed_at IS NOT NULL').all(fid) as any[]
-  const total_trades = closedPositions.length
-  const winning_trades = closedPositions.filter(p => p.pnl > 0).length
-  const losing_trades = closedPositions.filter(p => p.pnl <= 0).length
-  const total_volume = closedPositions.reduce((sum, p) => sum + p.size, 0)
-  const biggest_win = Math.max(...closedPositions.map(p => p.pnl), 0)
-  const biggest_loss = Math.min(...closedPositions.map(p => p.pnl), 0)
-  const total_pnl = closedPositions.reduce((sum, p) => sum + p.pnl, 0)
-  const avg_hold_time = total_trades > 0
-    ? closedPositions.reduce((sum, p) => sum + (p.closed_at - p.opened_at), 0) / total_trades
-    : 0
+app.get('/api/positions/:fid/closed', async (req, res) => {
+  try {
+    // Get closed positions from Supabase
+    const { data: positions, error: posError } = await supabase
+      .from('positions')
+      .select('*')
+      .eq('player_fid', req.params.fid)
+      .not('closed_at', 'is', null)
+      .order('closed_at', { ascending: false })
 
-  res.json({
-    farcaster_username: player.farcaster_username,
-    farcaster_fid: player.farcaster_fid,
-    display_name: player.display_name,
-    pfp_url: player.pfp_url,
-    cash: player.cash,
-    high_score: player.high_score,
-    created_at: player.created_at,
-    total_trades,
-    winning_trades,
-    losing_trades,
-    total_volume,
-    biggest_win,
-    biggest_loss,
-    avg_hold_time,
-    total_pnl
-  })
+    if (posError) throw posError
+
+    // Get token symbols
+    const { data: tokens, error: tokenError } = await supabase
+      .from('tokens')
+      .select('id, symbol')
+
+    if (tokenError) throw tokenError
+
+    // Map token_id to symbol
+    const tokenMap = new Map(tokens?.map(t => [t.id, t.symbol]) || [])
+
+    // Add token_symbol to each position
+    const positionsWithSymbols = positions?.map(p => ({
+      ...p,
+      token_symbol: tokenMap.get(p.token_id) || 'BATR'
+    })) || []
+
+    res.json(positionsWithSymbols)
+  } catch (error: any) {
+    console.error('Error fetching closed positions:', error)
+    res.status(500).json({ error: error.message })
+  }
+})
+
+app.get('/api/player/:fid/stats', async (req, res) => {
+  try {
+    const fid = req.params.fid
+
+    // Get player from Supabase
+    const { data: player, error: playerError } = await supabase
+      .from('players')
+      .select('*')
+      .eq('farcaster_fid', fid)
+      .single()
+
+    if (playerError || !player) {
+      return res.json({
+        farcaster_fid: parseInt(fid),
+        cash: 250,
+        high_score: 250,
+        created_at: Date.now(),
+        total_trades: 0,
+        winning_trades: 0,
+        losing_trades: 0,
+        total_volume: 0,
+        biggest_win: 0,
+        biggest_loss: 0,
+        avg_hold_time: 0,
+        total_pnl: 0
+      })
+    }
+
+    // Get closed positions from Supabase
+    const { data: closedPositions, error: posError } = await supabase
+      .from('positions')
+      .select('*')
+      .eq('player_fid', fid)
+      .not('closed_at', 'is', null)
+
+    if (posError) throw posError
+
+    const positions = closedPositions || []
+    const total_trades = positions.length
+    const winning_trades = positions.filter(p => p.pnl > 0).length
+    const losing_trades = positions.filter(p => p.pnl <= 0).length
+    const total_volume = positions.reduce((sum, p) => sum + (p.size || 0), 0)
+    const biggest_win = positions.length > 0 ? Math.max(...positions.map(p => p.pnl), 0) : 0
+    const biggest_loss = positions.length > 0 ? Math.min(...positions.map(p => p.pnl), 0) : 0
+    const total_pnl = positions.reduce((sum, p) => sum + (p.pnl || 0), 0)
+    const avg_hold_time = total_trades > 0
+      ? positions.reduce((sum, p) => sum + (p.closed_at - p.opened_at), 0) / total_trades
+      : 0
+
+    res.json({
+      farcaster_username: player.farcaster_username,
+      farcaster_fid: player.farcaster_fid,
+      display_name: player.display_name,
+      pfp_url: player.pfp_url,
+      cash: player.cash,
+      high_score: player.high_score,
+      created_at: player.created_at,
+      total_trades,
+      winning_trades,
+      losing_trades,
+      total_volume,
+      biggest_win,
+      biggest_loss,
+      avg_hold_time,
+      total_pnl
+    })
+  } catch (error: any) {
+    console.error('Error fetching player stats:', error)
+    res.status(500).json({ error: error.message })
+  }
 })
 
 app.post('/api/player/:fid/submit', (req, res) => {
