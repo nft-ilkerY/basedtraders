@@ -1,11 +1,17 @@
-// Client-side Price Engine - Local simulation for production
+// Client-side Price Engine - Hybrid: Real prices for crypto, simulated for game tokens
 class PriceEngine {
   private tokenPrices: Map<string, number> = new Map() // symbol -> price
   private listeners: Map<string, Set<(price: number) => void>> = new Map() // symbol -> callbacks
   private intervalId: number | null = null
+  private cryptoFetchInterval: number | null = null
   private volatility: number = 0.004
   private trend: number = 0
   private trendChangeCounter: number = 0
+
+  // Real crypto tokens (fetch from Binance)
+  private realCryptos = new Set(['BTC', 'ETH', 'SOL'])
+  // Game tokens (simulated)
+  private gameTokens = new Set(['BATR'])
 
   constructor() {
     // Initialize with default prices
@@ -13,18 +19,52 @@ class PriceEngine {
     this.tokenPrices.set('BTC', 50000)
     this.tokenPrices.set('ETH', 3000)
     this.tokenPrices.set('SOL', 100)
+
+    // Fetch real prices immediately
+    this.fetchRealCryptoPrices()
   }
 
   start() {
     if (this.intervalId) return
 
-    // Update prices every second
+    // Update game token prices every second
     this.intervalId = window.setInterval(() => {
-      this.updatePrices()
+      this.updateGameTokenPrices()
     }, 1000)
+
+    // Fetch real crypto prices every 5 seconds
+    this.cryptoFetchInterval = window.setInterval(() => {
+      this.fetchRealCryptoPrices()
+    }, 5000)
   }
 
-  private updatePrices() {
+  private async fetchRealCryptoPrices() {
+    try {
+      // Fetch from Binance API (public, no rate limit for simple requests)
+      const symbols = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT']
+      const promises = symbols.map(symbol =>
+        fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`)
+          .then(res => res.json())
+      )
+
+      const results = await Promise.all(promises)
+
+      results.forEach((data: any) => {
+        if (data && data.symbol && data.price) {
+          const symbol = data.symbol.replace('USDT', '')
+          const price = parseFloat(data.price)
+
+          this.tokenPrices.set(symbol, price)
+          this.notifyListenersForToken(symbol)
+        }
+      })
+    } catch (error) {
+      console.error('Failed to fetch crypto prices:', error)
+      // Keep using last known prices if fetch fails
+    }
+  }
+
+  private updateGameTokenPrices() {
     // Update trend periodically
     this.trendChangeCounter++
     if (this.trendChangeCounter > 60 + Math.random() * 120) {
@@ -33,8 +73,9 @@ class PriceEngine {
       this.trendChangeCounter = 0
     }
 
-    // Update each token price
-    this.tokenPrices.forEach((price, symbol) => {
+    // Only update game tokens (BATR, etc)
+    this.gameTokens.forEach(symbol => {
+      const price = this.tokenPrices.get(symbol) || 100
       let newPrice = price
 
       // Random price movements
@@ -71,6 +112,10 @@ class PriceEngine {
     if (this.intervalId) {
       clearInterval(this.intervalId)
       this.intervalId = null
+    }
+    if (this.cryptoFetchInterval) {
+      clearInterval(this.cryptoFetchInterval)
+      this.cryptoFetchInterval = null
     }
   }
 
