@@ -1,50 +1,76 @@
-// Client-side Price Engine - Connects to WebSocket for global prices
+// Client-side Price Engine - Local simulation for production
 class PriceEngine {
   private tokenPrices: Map<string, number> = new Map() // symbol -> price
   private listeners: Map<string, Set<(price: number) => void>> = new Map() // symbol -> callbacks
-  private ws: WebSocket | null = null
-  private reconnectTimeout: number | null = null
+  private intervalId: number | null = null
+  private volatility: number = 0.004
+  private trend: number = 0
+  private trendChangeCounter: number = 0
 
   constructor() {
-    this.connect()
-  }
-
-  private connect() {
-    try {
-      // Use relative WebSocket URL based on current location
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-      const wsUrl = `${protocol}//${window.location.host}/ws`
-      this.ws = new WebSocket(wsUrl)
-
-      this.ws.onmessage = (event) => {
-        const data = JSON.parse(event.data)
-        // Server now sends { prices: { BATR: 100, BTC: 50000, ... } }
-        if (data.prices) {
-          Object.entries(data.prices).forEach(([symbol, price]) => {
-            this.tokenPrices.set(symbol, price as number)
-            this.notifyListenersForToken(symbol)
-          })
-        }
-      }
-
-      this.ws.onclose = () => {
-        this.reconnectTimeout = setTimeout(() => this.connect(), 3000)
-      }
-    } catch (error) {
-      this.reconnectTimeout = setTimeout(() => this.connect(), 3000)
-    }
+    // Initialize with default prices
+    this.tokenPrices.set('BATR', 100)
+    this.tokenPrices.set('BTC', 50000)
+    this.tokenPrices.set('ETH', 3000)
+    this.tokenPrices.set('SOL', 100)
   }
 
   start() {
-    // WebSocket handles updates automatically
+    if (this.intervalId) return
+
+    // Update prices every second
+    this.intervalId = window.setInterval(() => {
+      this.updatePrices()
+    }, 1000)
+  }
+
+  private updatePrices() {
+    // Update trend periodically
+    this.trendChangeCounter++
+    if (this.trendChangeCounter > 60 + Math.random() * 120) {
+      const randomTrend = (Math.random() - 0.5) * 0.0002
+      this.trend = randomTrend
+      this.trendChangeCounter = 0
+    }
+
+    // Update each token price
+    this.tokenPrices.forEach((price, symbol) => {
+      let newPrice = price
+
+      // Random price movements
+      if (Math.random() < 0.03) {
+        // Small movement (3% chance)
+        const amount = (price * 0.001) + Math.random() * (price * 0.003)
+        const direction = Math.random() > 0.5 ? 1 : -1
+        newPrice = price + (amount * direction)
+      } else if (Math.random() < 0.0008) {
+        // Crash (0.08% chance)
+        const dropPercent = 0.02 + Math.random() * 0.03
+        newPrice = price * (1 - dropPercent)
+      } else if (Math.random() < 0.0008) {
+        // Pump (0.08% chance)
+        const risePercent = 0.02 + Math.random() * 0.03
+        newPrice = price * (1 + risePercent)
+      } else {
+        // Normal volatility
+        const randomComponent = (Math.random() - 0.5) * 2 * this.volatility
+        const change = this.trend + randomComponent
+        newPrice = price * (1 + change)
+      }
+
+      // Ensure price doesn't go too low
+      newPrice = Math.max(1, newPrice)
+
+      // Update price
+      this.tokenPrices.set(symbol, newPrice)
+      this.notifyListenersForToken(symbol)
+    })
   }
 
   stop() {
-    if (this.ws) {
-      this.ws.close()
-    }
-    if (this.reconnectTimeout) {
-      clearTimeout(this.reconnectTimeout)
+    if (this.intervalId) {
+      clearInterval(this.intervalId)
+      this.intervalId = null
     }
   }
 
