@@ -129,12 +129,22 @@ class GlobalPriceEngine {
   private absoluteMaxPrice: number = 700
 
   constructor() {
-    // Initialize prices for all active tokens
-    const tokens = db.prepare('SELECT id, current_price FROM tokens WHERE is_active = 1').all() as { id: number, current_price: number }[]
-    tokens.forEach(token => {
-      this.tokenPrices.set(token.id, token.current_price)
-    })
     this.trend = -0.0002
+    this.initTokens()
+  }
+
+  private async initTokens() {
+    // Initialize prices for all active tokens
+    const { data: tokens, error } = await supabase
+      .from('tokens')
+      .select('id, current_price')
+      .eq('is_active', 1)
+
+    if (!error && tokens) {
+      tokens.forEach(token => {
+        this.tokenPrices.set(token.id, token.current_price)
+      })
+    }
   }
 
   start() {
@@ -145,13 +155,21 @@ class GlobalPriceEngine {
     }, 1000)
   }
 
-  private updateAllPrices() {
+  private async updateAllPrices() {
     const elapsedMinutes = (Date.now() - this.startTime) / 1000 / 60
 
     // Get all active tokens
-    const tokens = db.prepare('SELECT id, current_price, symbol, is_real_crypto FROM tokens WHERE is_active = 1').all() as { id: number, current_price: number, symbol: string, is_real_crypto: number }[]
+    const { data: tokens, error } = await supabase
+      .from('tokens')
+      .select('id, current_price, symbol, is_real_crypto')
+      .eq('is_active', 1)
 
-    tokens.forEach(token => {
+    if (error || !tokens) {
+      console.error('Error fetching tokens for price update:', error)
+      return
+    }
+
+    tokens.forEach(async (token) => {
       let price = this.tokenPrices.get(token.id) || token.current_price
 
       // For real crypto tokens, use real prices from Binance
@@ -195,40 +213,65 @@ class GlobalPriceEngine {
 
       // Update token price in memory and database
       this.tokenPrices.set(token.id, price)
-      db.prepare('UPDATE tokens SET current_price = ? WHERE id = ?').run(price, token.id)
+
+      await supabase
+        .from('tokens')
+        .update({ current_price: price })
+        .eq('id', token.id)
 
       // Save to price history
-      this.savePriceForToken(token.id, price)
+      await this.savePriceForToken(token.id, price)
     })
 
     this.broadcastPrice()
   }
 
-  private savePriceForToken(tokenId: number, price: number) {
-    db.prepare('INSERT INTO price_history (token_id, price, timestamp) VALUES (?, ?, ?)').run(
-      tokenId,
-      price,
-      Date.now()
-    )
+  private async savePriceForToken(tokenId: number, price: number) {
+    // Insert price history
+    await supabase
+      .from('price_history')
+      .insert({
+        token_id: tokenId,
+        price,
+        timestamp: Date.now()
+      })
 
     // Keep only last 300 records per token
-    const count = db.prepare('SELECT COUNT(*) as count FROM price_history WHERE token_id = ?').get(tokenId) as { count: number }
-    if (count.count > 300) {
-      db.prepare(`
-        DELETE FROM price_history
-        WHERE token_id = ? AND id NOT IN (
-          SELECT id FROM price_history
-          WHERE token_id = ?
-          ORDER BY timestamp DESC
-          LIMIT 300
-        )
-      `).run(tokenId, tokenId)
+    const { count, error: countError } = await supabase
+      .from('price_history')
+      .select('*', { count: 'exact', head: true })
+      .eq('token_id', tokenId)
+
+    if (!countError && count && count > 300) {
+      // Get IDs of records to keep
+      const { data: recordsToKeep, error: selectError } = await supabase
+        .from('price_history')
+        .select('id')
+        .eq('token_id', tokenId)
+        .order('timestamp', { ascending: false })
+        .limit(300)
+
+      if (!selectError && recordsToKeep) {
+        const idsToKeep = recordsToKeep.map(r => r.id)
+
+        // Delete old records
+        await supabase
+          .from('price_history')
+          .delete()
+          .eq('token_id', tokenId)
+          .not('id', 'in', `(${idsToKeep.join(',')})`)
+      }
     }
   }
 
-  private broadcastPrice() {
+  private async broadcastPrice() {
     // Broadcast all token prices as { prices: { BATR: 100, BTC: 50000, ... } }
-    const tokens = db.prepare('SELECT id, symbol, current_price FROM tokens WHERE is_active = 1').all() as { id: number, symbol: string, current_price: number }[]
+    const { data: tokens, error } = await supabase
+      .from('tokens')
+      .select('id, symbol, current_price')
+      .eq('is_active', 1)
+
+    if (error || !tokens) return
 
     const prices: Record<string, number> = {}
     tokens.forEach(t => {
@@ -245,27 +288,51 @@ class GlobalPriceEngine {
     })
   }
 
-  getCurrentPrice(tokenSymbol: string = 'BATR') {
-    const token = db.prepare('SELECT current_price FROM tokens WHERE symbol = ?').get(tokenSymbol) as { current_price: number } | undefined
+  async getCurrentPrice(tokenSymbol: string = 'BATR') {
+    const { data: token, error } = await supabase
+      .from('tokens')
+      .select('current_price')
+      .eq('symbol', tokenSymbol)
+      .single()
+
     return token?.current_price || 100
   }
 
-  getPriceHistory(tokenSymbol: string = 'BATR', limit: number = 120) {
-    const token = db.prepare('SELECT id FROM tokens WHERE symbol = ?').get(tokenSymbol) as { id: number } | undefined
-    if (!token) return []
+  async getPriceHistory(tokenSymbol: string = 'BATR', limit: number = 120) {
+    const { data: token, error: tokenError } = await supabase
+      .from('tokens')
+      .select('id')
+      .eq('symbol', tokenSymbol)
+      .single()
 
-    const rows = db.prepare('SELECT price FROM price_history WHERE token_id = ? ORDER BY timestamp DESC LIMIT ?').all(token.id, limit) as { price: number }[]
+    if (tokenError || !token) return []
+
+    const { data: rows, error: historyError } = await supabase
+      .from('price_history')
+      .select('price')
+      .eq('token_id', token.id)
+      .order('timestamp', { ascending: false })
+      .limit(limit)
+
+    if (historyError || !rows) return []
+
     return rows.reverse().map(r => r.price)
   }
 
-  reloadTokens() {
+  async reloadTokens() {
     // Reload all active tokens into memory
-    const tokens = db.prepare('SELECT id, current_price FROM tokens WHERE is_active = 1').all() as { id: number, current_price: number }[]
-    tokens.forEach(token => {
-      if (!this.tokenPrices.has(token.id)) {
-        this.tokenPrices.set(token.id, token.current_price)
-      }
-    })
+    const { data: tokens, error } = await supabase
+      .from('tokens')
+      .select('id, current_price')
+      .eq('is_active', 1)
+
+    if (!error && tokens) {
+      tokens.forEach(token => {
+        if (!this.tokenPrices.has(token.id)) {
+          this.tokenPrices.set(token.id, token.current_price)
+        }
+      })
+    }
   }
 }
 
@@ -277,112 +344,197 @@ cryptoPriceFetcher.setDatabase(db)
 cryptoPriceFetcher.start()
 
 // API Routes
-app.get('/api/price', (req, res) => {
-  const tokenSymbol = (req.query.symbol as string) || 'BATR'
+app.get('/api/price', async (req, res) => {
+  try {
+    const tokenSymbol = (req.query.symbol as string) || 'BATR'
 
-  // Get token from database
-  const token = db.prepare('SELECT * FROM tokens WHERE symbol = ?').get(tokenSymbol) as any
+    // Get token from database
+    const { data: token, error } = await supabase
+      .from('tokens')
+      .select('*')
+      .eq('symbol', tokenSymbol)
+      .single()
 
-  if (!token) {
-    return res.status(404).json({ error: 'Token not found' })
+    if (error || !token) {
+      return res.status(404).json({ error: 'Token not found' })
+    }
+
+    const history = await priceEngine.getPriceHistory(tokenSymbol, 120)
+
+    res.json({
+      price: token.current_price,
+      history,
+      timestamp: Date.now()
+    })
+  } catch (error: any) {
+    console.error('Error fetching price:', error)
+    res.status(500).json({ error: error.message })
   }
-
-  res.json({
-    price: token.current_price,
-    history: priceEngine.getPriceHistory(tokenSymbol, 120),
-    timestamp: Date.now()
-  })
 })
 
-app.get('/api/player/:fid', (req, res) => {
-  const player = db.prepare('SELECT * FROM players WHERE farcaster_fid = ?').get(req.params.fid)
-  if (!player) {
-    return res.json(null)
+app.get('/api/player/:fid', async (req, res) => {
+  try {
+    const { data: player, error } = await supabase
+      .from('players')
+      .select('*')
+      .eq('farcaster_fid', req.params.fid)
+      .single()
+
+    if (error || !player) {
+      return res.json(null)
+    }
+    res.json(player)
+  } catch (error: any) {
+    console.error('Error fetching player:', error)
+    res.json(null)
   }
-  res.json(player)
 })
 
-app.post('/api/player/create', (req, res) => {
-  const { username, fid, displayName, pfpUrl } = req.body
+app.post('/api/player/create', async (req, res) => {
+  try {
+    const { username, fid, displayName, pfpUrl } = req.body
 
-  const existing = db.prepare('SELECT * FROM players WHERE farcaster_fid = ?').get(fid)
+    // Check if player exists
+    const { data: existing, error: findError } = await supabase
+      .from('players')
+      .select('*')
+      .eq('farcaster_fid', fid)
+      .single()
 
-  if (existing) {
-    db.prepare('UPDATE players SET farcaster_username = ?, display_name = ?, pfp_url = ?, updated_at = ? WHERE farcaster_fid = ?').run(
-      username,
-      displayName,
-      pfpUrl,
-      Date.now(),
-      fid
-    )
-    return res.json(existing)
+    if (existing && !findError) {
+      // Update existing player
+      const { error: updateError } = await supabase
+        .from('players')
+        .update({
+          farcaster_username: username,
+          display_name: displayName,
+          pfp_url: pfpUrl,
+          updated_at: Date.now()
+        })
+        .eq('farcaster_fid', fid)
+
+      if (updateError) throw updateError
+      return res.json(existing)
+    }
+
+    // Create new player
+    const { data: newPlayer, error: insertError } = await supabase
+      .from('players')
+      .insert({
+        farcaster_fid: fid,
+        farcaster_username: username,
+        display_name: displayName,
+        pfp_url: pfpUrl,
+        cash: 250,
+        high_score: 250,
+        created_at: Date.now(),
+        updated_at: Date.now()
+      })
+      .select()
+      .single()
+
+    if (insertError) throw insertError
+    res.json(newPlayer)
+  } catch (error: any) {
+    console.error('Error creating/updating player:', error)
+    res.status(500).json({ error: error.message })
   }
-
-  db.prepare('INSERT INTO players (farcaster_fid, farcaster_username, display_name, pfp_url, cash, high_score, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run(
-    fid,
-    username,
-    displayName,
-    pfpUrl,
-    250,
-    250,
-    Date.now(),
-    Date.now()
-  )
-
-  const newPlayer = db.prepare('SELECT * FROM players WHERE farcaster_fid = ?').get(fid)
-  res.json(newPlayer)
 })
 
-app.post('/api/player/:fid/update', (req, res) => {
-  const { cash, high_score } = req.body
-  db.prepare('UPDATE players SET cash = ?, high_score = ?, updated_at = ? WHERE farcaster_fid = ?').run(
-    cash,
-    high_score,
-    Date.now(),
-    req.params.fid
-  )
-  res.json({ success: true })
-})
+app.post('/api/player/:fid/update', async (req, res) => {
+  try {
+    const { cash, high_score } = req.body
 
-app.post('/api/position/open', (req, res) => {
-  const { id, player_fid, token_symbol, type, entry_price, leverage, size, collateral } = req.body
+    const { error } = await supabase
+      .from('players')
+      .update({
+        cash,
+        high_score,
+        updated_at: Date.now()
+      })
+      .eq('farcaster_fid', req.params.fid)
 
-  // Get token_id from symbol
-  const token = db.prepare('SELECT id FROM tokens WHERE symbol = ?').get(token_symbol || 'BATR') as { id: number } | undefined
-
-  if (!token) {
-    return res.status(400).json({ error: 'Invalid token' })
+    if (error) throw error
+    res.json({ success: true })
+  } catch (error: any) {
+    console.error('Error updating player:', error)
+    res.status(500).json({ error: error.message })
   }
-
-  db.prepare('INSERT INTO positions (id, player_fid, token_id, type, entry_price, leverage, size, collateral, opened_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)').run(
-    id,
-    player_fid,
-    token.id,
-    type,
-    entry_price,
-    leverage,
-    size,
-    collateral,
-    Date.now()
-  )
-  res.json({ success: true })
 })
 
-app.post('/api/position/close', (req, res) => {
-  const { id, close_price, pnl, is_liquidated } = req.body
-  db.prepare('UPDATE positions SET closed_at = ?, close_price = ?, pnl = ?, is_liquidated = ? WHERE id = ?').run(
-    Date.now(),
-    close_price,
-    pnl,
-    is_liquidated ? 1 : 0,
-    id
-  )
-  res.json({ success: true })
+app.post('/api/position/open', async (req, res) => {
+  try {
+    const { id, player_fid, token_symbol, type, entry_price, leverage, size, collateral } = req.body
+
+    // Get token_id from symbol
+    const { data: token, error: tokenError } = await supabase
+      .from('tokens')
+      .select('id')
+      .eq('symbol', token_symbol || 'BATR')
+      .single()
+
+    if (tokenError || !token) {
+      return res.status(400).json({ error: 'Invalid token' })
+    }
+
+    const { error: insertError } = await supabase
+      .from('positions')
+      .insert({
+        id,
+        player_fid,
+        token_id: token.id,
+        type,
+        entry_price,
+        leverage,
+        size,
+        collateral,
+        opened_at: Date.now()
+      })
+
+    if (insertError) throw insertError
+    res.json({ success: true })
+  } catch (error: any) {
+    console.error('Error opening position:', error)
+    res.status(500).json({ error: error.message })
+  }
 })
 
-app.get('/api/positions/:fid', (req, res) => {
-  const positions = db.prepare('SELECT * FROM positions WHERE player_fid = ? ORDER BY opened_at DESC').all(req.params.fid)
-  res.json(positions)
+app.post('/api/position/close', async (req, res) => {
+  try {
+    const { id, close_price, pnl, is_liquidated } = req.body
+
+    const { error } = await supabase
+      .from('positions')
+      .update({
+        closed_at: Date.now(),
+        close_price,
+        pnl,
+        is_liquidated: is_liquidated ? 1 : 0
+      })
+      .eq('id', id)
+
+    if (error) throw error
+    res.json({ success: true })
+  } catch (error: any) {
+    console.error('Error closing position:', error)
+    res.status(500).json({ error: error.message })
+  }
+})
+
+app.get('/api/positions/:fid', async (req, res) => {
+  try {
+    const { data: positions, error } = await supabase
+      .from('positions')
+      .select('*')
+      .eq('player_fid', req.params.fid)
+      .order('opened_at', { ascending: false })
+
+    if (error) throw error
+    res.json(positions || [])
+  } catch (error: any) {
+    console.error('Error fetching positions:', error)
+    res.status(500).json({ error: error.message })
+  }
 })
 
 app.get('/api/positions/:fid/open', async (req, res) => {
@@ -527,87 +679,134 @@ app.get('/api/player/:fid/stats', async (req, res) => {
   }
 })
 
-app.post('/api/player/:fid/submit', (req, res) => {
-  const fid = req.params.fid
-  const { cash } = req.body
+app.post('/api/player/:fid/submit', async (req, res) => {
+  try {
+    const fid = req.params.fid
+    const { cash } = req.body
 
-  const allPlayers = db.prepare('SELECT farcaster_fid, submitted_cash FROM players').all() as { farcaster_fid: number, submitted_cash: number }[]
-  const { rank, position } = calculateRank(cash, allPlayers)
+    // Get all players
+    const { data: allPlayers, error: playersError } = await supabase
+      .from('players')
+      .select('farcaster_fid, submitted_cash')
 
-  db.prepare('UPDATE players SET submitted_cash = ?, rank = ?, updated_at = ? WHERE farcaster_fid = ?').run(
-    cash,
-    rank,
-    Date.now(),
-    fid
-  )
+    if (playersError) throw playersError
 
-  const updatedPlayers = db.prepare('SELECT farcaster_fid, submitted_cash FROM players WHERE submitted_cash > 0').all() as { farcaster_fid: number, submitted_cash: number }[]
-  updatedPlayers.forEach((player) => {
-    const { rank: newRank } = calculateRank(player.submitted_cash, updatedPlayers)
-    db.prepare('UPDATE players SET rank = ? WHERE farcaster_fid = ?').run(newRank, player.farcaster_fid)
-  })
+    const { rank, position } = calculateRank(cash, allPlayers || [])
 
-  res.json({ success: true, rank, position })
+    // Update this player
+    const { error: updateError } = await supabase
+      .from('players')
+      .update({
+        submitted_cash: cash,
+        rank,
+        updated_at: Date.now()
+      })
+      .eq('farcaster_fid', fid)
+
+    if (updateError) throw updateError
+
+    // Get updated players with submitted cash
+    const { data: updatedPlayers, error: updatedError } = await supabase
+      .from('players')
+      .select('farcaster_fid, submitted_cash')
+      .gt('submitted_cash', 0)
+
+    if (updatedError) throw updatedError
+
+    // Update ranks for all players
+    if (updatedPlayers) {
+      for (const player of updatedPlayers) {
+        const { rank: newRank } = calculateRank(player.submitted_cash, updatedPlayers)
+        await supabase
+          .from('players')
+          .update({ rank: newRank })
+          .eq('farcaster_fid', player.farcaster_fid)
+      }
+    }
+
+    res.json({ success: true, rank, position })
+  } catch (error: any) {
+    console.error('Error submitting player score:', error)
+    res.status(500).json({ error: error.message })
+  }
 })
 
-app.get('/api/leaderboard', (req, res) => {
-  const timeRange = (req.query.range as string) || 'weekly'
+app.get('/api/leaderboard', async (req, res) => {
+  try {
+    const timeRange = (req.query.range as string) || 'weekly'
 
-  // Calculate time threshold based on range
-  const now = Date.now()
-  let timeThreshold: number
+    // Calculate time threshold based on range
+    const now = Date.now()
+    let timeThreshold: number
 
-  switch (timeRange) {
-    case 'daily':
-      timeThreshold = now - (24 * 60 * 60 * 1000) // Last 24 hours
-      break
-    case 'weekly':
-      timeThreshold = now - (7 * 24 * 60 * 60 * 1000) // Last 7 days
-      break
-    case 'monthly':
-      timeThreshold = now - (30 * 24 * 60 * 60 * 1000) // Last 30 days
-      break
-    case 'quarterly':
-      timeThreshold = now - (90 * 24 * 60 * 60 * 1000) // Last 90 days
-      break
-    default:
-      timeThreshold = now - (7 * 24 * 60 * 60 * 1000) // Default to weekly
-  }
-
-  // Get all players who have at least one trade
-  const players = db.prepare('SELECT farcaster_fid, farcaster_username, display_name, pfp_url, cash, high_score FROM players').all() as any[]
-
-  // Calculate stats for each player based on positions in the time range
-  const leaderboard = players.map(player => {
-    const positions = db.prepare(`
-      SELECT pnl, size, opened_at, closed_at
-      FROM positions
-      WHERE player_fid = ? AND closed_at IS NOT NULL AND closed_at >= ?
-    `).all(player.farcaster_fid, timeThreshold) as any[]
-
-    if (positions.length === 0) return null
-
-    const total_trades = positions.length
-    const winning_trades = positions.filter(p => p.pnl > 0).length
-    const losing_trades = positions.filter(p => p.pnl <= 0).length
-    const total_volume = positions.reduce((sum, p) => sum + p.size, 0)
-    const total_pnl = positions.reduce((sum, p) => sum + p.pnl, 0)
-    const biggest_win = Math.max(...positions.map(p => p.pnl), 0)
-    const biggest_loss = Math.min(...positions.map(p => p.pnl), 0)
-
-    return {
-      ...player,
-      total_trades,
-      winning_trades,
-      losing_trades,
-      total_volume,
-      total_pnl,
-      biggest_win,
-      biggest_loss
+    switch (timeRange) {
+      case 'daily':
+        timeThreshold = now - (24 * 60 * 60 * 1000) // Last 24 hours
+        break
+      case 'weekly':
+        timeThreshold = now - (7 * 24 * 60 * 60 * 1000) // Last 7 days
+        break
+      case 'monthly':
+        timeThreshold = now - (30 * 24 * 60 * 60 * 1000) // Last 30 days
+        break
+      case 'quarterly':
+        timeThreshold = now - (90 * 24 * 60 * 60 * 1000) // Last 90 days
+        break
+      default:
+        timeThreshold = now - (7 * 24 * 60 * 60 * 1000) // Default to weekly
     }
-  }).filter(p => p !== null && p.total_trades > 0) // Only include players with trades
 
-  res.json(leaderboard)
+    // Get all players
+    const { data: players, error: playersError } = await supabase
+      .from('players')
+      .select('farcaster_fid, farcaster_username, display_name, pfp_url, cash, high_score')
+
+    if (playersError) throw playersError
+
+    // Calculate stats for each player based on positions in the time range
+    const leaderboard = await Promise.all((players || []).map(async player => {
+      const { data: positions, error: posError } = await supabase
+        .from('positions')
+        .select('pnl, size, opened_at, closed_at')
+        .eq('player_fid', player.farcaster_fid)
+        .not('closed_at', 'is', null)
+        .gte('closed_at', timeThreshold)
+
+      if (posError) {
+        console.error('Error fetching positions for player:', player.farcaster_fid, posError)
+        return null
+      }
+
+      if (!positions || positions.length === 0) return null
+
+      const total_trades = positions.length
+      const winning_trades = positions.filter(p => p.pnl > 0).length
+      const losing_trades = positions.filter(p => p.pnl <= 0).length
+      const total_volume = positions.reduce((sum, p) => sum + p.size, 0)
+      const total_pnl = positions.reduce((sum, p) => sum + p.pnl, 0)
+      const biggest_win = Math.max(...positions.map(p => p.pnl), 0)
+      const biggest_loss = Math.min(...positions.map(p => p.pnl), 0)
+
+      return {
+        ...player,
+        total_trades,
+        winning_trades,
+        losing_trades,
+        total_volume,
+        total_pnl,
+        biggest_win,
+        biggest_loss
+      }
+    }))
+
+    // Filter out nulls and players with no trades
+    const filteredLeaderboard = leaderboard.filter(p => p !== null && p.total_trades > 0)
+
+    res.json(filteredLeaderboard)
+  } catch (error: any) {
+    console.error('Error fetching leaderboard:', error)
+    res.status(500).json({ error: error.message })
+  }
 })
 
 // Admin middleware - check if user FID is in admin list
@@ -622,9 +821,19 @@ const isAdmin = (req: any, res: any, next: any) => {
 }
 
 // Admin: Get all tokens
-app.get('/api/admin/tokens', isAdmin, (req, res) => {
-  const tokens = db.prepare('SELECT * FROM tokens ORDER BY created_at DESC').all()
-  res.json(tokens)
+app.get('/api/admin/tokens', isAdmin, async (req, res) => {
+  try {
+    const { data: tokens, error } = await supabase
+      .from('tokens')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+    res.json(tokens || [])
+  } catch (error: any) {
+    console.error('Error fetching admin tokens:', error)
+    res.status(500).json({ error: error.message })
+  }
 })
 
 // Admin: Add token
@@ -670,32 +879,46 @@ app.post('/api/admin/tokens', isAdmin, async (req, res) => {
     }
 
     // Insert token with logo URL
-    const result = db.prepare('INSERT INTO tokens (symbol, name, initial_price, current_price, is_active, is_real_crypto, logo_url, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run(
-      symbol,
-      name,
-      initial_price || 0,
-      initial_price || 0,
-      1,
-      is_real_crypto ? 1 : 0,
-      logoUrl,
-      Date.now()
-    )
+    const { data: newToken, error: insertError } = await supabase
+      .from('tokens')
+      .insert({
+        symbol,
+        name,
+        initial_price: initial_price || 0,
+        current_price: initial_price || 0,
+        is_active: 1,
+        is_real_crypto: is_real_crypto ? 1 : 0,
+        logo_url: logoUrl,
+        created_at: Date.now()
+      })
+      .select()
+      .single()
 
-    const tokenId = result.lastInsertRowid
+    if (insertError) throw insertError
+
+    const tokenId = newToken.id
 
     // Initialize price history with initial price (create 120 historical points)
     const now = Date.now()
+    const priceHistoryRecords = []
     for (let i = 119; i >= 0; i--) {
       const timestamp = now - (i * 1000) // 1 second intervals
-      db.prepare('INSERT INTO price_history (token_id, price, timestamp) VALUES (?, ?, ?)').run(
-        tokenId,
-        initial_price,
+      priceHistoryRecords.push({
+        token_id: tokenId,
+        price: initial_price,
         timestamp
-      )
+      })
     }
 
+    // Bulk insert price history
+    const { error: historyError } = await supabase
+      .from('price_history')
+      .insert(priceHistoryRecords)
+
+    if (historyError) throw historyError
+
     // Reload price engine to include new token
-    priceEngine.reloadTokens()
+    await priceEngine.reloadTokens()
 
     // If it's a real crypto token, reload Binance WebSocket
     if (is_real_crypto) {
@@ -709,16 +932,20 @@ app.post('/api/admin/tokens', isAdmin, async (req, res) => {
 })
 
 // Admin: Update token
-app.put('/api/admin/tokens/:id', isAdmin, (req, res) => {
+app.put('/api/admin/tokens/:id', isAdmin, async (req, res) => {
   const { name, is_active, max_leverage } = req.body
 
   try {
-    db.prepare('UPDATE tokens SET name = ?, is_active = ?, max_leverage = ? WHERE id = ?').run(
-      name,
-      is_active ? 1 : 0,
-      max_leverage || 10,
-      req.params.id
-    )
+    const { error } = await supabase
+      .from('tokens')
+      .update({
+        name,
+        is_active: is_active ? 1 : 0,
+        max_leverage: max_leverage || 10
+      })
+      .eq('id', req.params.id)
+
+    if (error) throw error
     res.json({ success: true })
   } catch (error: any) {
     res.status(400).json({ error: error.message })
@@ -726,20 +953,35 @@ app.put('/api/admin/tokens/:id', isAdmin, (req, res) => {
 })
 
 // Admin: Delete token
-app.delete('/api/admin/tokens/:id', isAdmin, (req, res) => {
+app.delete('/api/admin/tokens/:id', isAdmin, async (req, res) => {
   try {
     // Check if there are any positions using this token
-    const positionsCount = db.prepare('SELECT COUNT(*) as count FROM positions WHERE token_id = ?').get(req.params.id) as { count: number }
+    const { count, error: countError } = await supabase
+      .from('positions')
+      .select('*', { count: 'exact', head: true })
+      .eq('token_id', req.params.id)
 
-    if (positionsCount.count > 0) {
-      return res.status(400).json({ error: `Cannot delete token: ${positionsCount.count} position(s) exist for this token. Please close all positions first or deactivate the token instead.` })
+    if (countError) throw countError
+
+    if (count && count > 0) {
+      return res.status(400).json({ error: `Cannot delete token: ${count} position(s) exist for this token. Please close all positions first or deactivate the token instead.` })
     }
 
     // Delete price history for this token
-    db.prepare('DELETE FROM price_history WHERE token_id = ?').run(req.params.id)
+    const { error: historyError } = await supabase
+      .from('price_history')
+      .delete()
+      .eq('token_id', req.params.id)
+
+    if (historyError) throw historyError
 
     // Delete the token
-    db.prepare('DELETE FROM tokens WHERE id = ?').run(req.params.id)
+    const { error: deleteError } = await supabase
+      .from('tokens')
+      .delete()
+      .eq('id', req.params.id)
+
+    if (deleteError) throw deleteError
 
     res.json({ success: true })
   } catch (error: any) {
@@ -748,7 +990,7 @@ app.delete('/api/admin/tokens/:id', isAdmin, (req, res) => {
 })
 
 // Admin: Count players below threshold
-app.get('/api/admin/players/count', isAdmin, (req, res) => {
+app.get('/api/admin/players/count', isAdmin, async (req, res) => {
   try {
     const threshold = parseFloat(req.query.threshold as string)
 
@@ -756,15 +998,21 @@ app.get('/api/admin/players/count', isAdmin, (req, res) => {
       return res.status(400).json({ error: 'Invalid threshold' })
     }
 
-    const result = db.prepare('SELECT COUNT(*) as count FROM players WHERE cash < ?').get(threshold) as { count: number }
-    res.json({ count: result.count })
+    const { count, error } = await supabase
+      .from('players')
+      .select('*', { count: 'exact', head: true })
+      .lt('cash', threshold)
+
+    if (error) throw error
+
+    res.json({ count: count || 0 })
   } catch (error: any) {
     res.status(400).json({ error: error.message })
   }
 })
 
 // Admin: Bulk balance update
-app.post('/api/admin/players/bulk-balance', isAdmin, (req, res) => {
+app.post('/api/admin/players/bulk-balance', isAdmin, async (req, res) => {
   try {
     const { threshold, amount } = req.body
 
@@ -773,38 +1021,64 @@ app.post('/api/admin/players/bulk-balance', isAdmin, (req, res) => {
     }
 
     // Get affected players
-    const affectedPlayers = db.prepare('SELECT farcaster_fid, cash FROM players WHERE cash < ?').all(threshold) as any[]
+    const { data: affectedPlayers, error: fetchError } = await supabase
+      .from('players')
+      .select('farcaster_fid, cash')
+      .lt('cash', threshold)
+
+    if (fetchError) throw fetchError
 
     // Update each player's balance
-    const updateStmt = db.prepare('UPDATE players SET cash = cash + ?, updated_at = ? WHERE farcaster_fid = ?')
     const now = Date.now()
 
-    affectedPlayers.forEach(player => {
-      updateStmt.run(amount, now, player.farcaster_fid)
-    })
+    if (affectedPlayers && affectedPlayers.length > 0) {
+      for (const player of affectedPlayers) {
+        await supabase
+          .from('players')
+          .update({
+            cash: player.cash + amount,
+            updated_at: now
+          })
+          .eq('farcaster_fid', player.farcaster_fid)
+      }
+    }
 
-    res.json({ success: true, updated: affectedPlayers.length })
+    res.json({ success: true, updated: affectedPlayers?.length || 0 })
   } catch (error: any) {
     res.status(400).json({ error: error.message })
   }
 })
 
 // Admin: Get all config
-app.get('/api/admin/config', isAdmin, (req, res) => {
-  const configs = db.prepare('SELECT * FROM config ORDER BY key').all()
-  res.json(configs)
+app.get('/api/admin/config', isAdmin, async (req, res) => {
+  try {
+    const { data: configs, error } = await supabase
+      .from('config')
+      .select('*')
+      .order('key', { ascending: true })
+
+    if (error) throw error
+    res.json(configs || [])
+  } catch (error: any) {
+    console.error('Error fetching admin config:', error)
+    res.status(500).json({ error: error.message })
+  }
 })
 
 // Admin: Update config
-app.put('/api/admin/config/:key', isAdmin, (req, res) => {
+app.put('/api/admin/config/:key', isAdmin, async (req, res) => {
   const { value } = req.body
 
   try {
-    db.prepare('UPDATE config SET value = ?, updated_at = ? WHERE key = ?').run(
-      value,
-      Date.now(),
-      req.params.key
-    )
+    const { error } = await supabase
+      .from('config')
+      .update({
+        value,
+        updated_at: Date.now()
+      })
+      .eq('key', req.params.key)
+
+    if (error) throw error
     res.json({ success: true })
   } catch (error: any) {
     res.status(400).json({ error: error.message })
@@ -812,19 +1086,40 @@ app.put('/api/admin/config/:key', isAdmin, (req, res) => {
 })
 
 // Public: Get active tokens
-app.get('/api/tokens', (req, res) => {
-  const tokens = db.prepare('SELECT * FROM tokens WHERE is_active = 1 ORDER BY created_at ASC').all()
-  res.json(tokens)
+app.get('/api/tokens', async (req, res) => {
+  try {
+    const { data: tokens, error } = await supabase
+      .from('tokens')
+      .select('*')
+      .eq('is_active', 1)
+      .order('created_at', { ascending: true })
+
+    if (error) throw error
+    res.json(tokens || [])
+  } catch (error: any) {
+    console.error('Error fetching tokens:', error)
+    res.status(500).json({ error: error.message })
+  }
 })
 
 // Public: Get config
-app.get('/api/config', (req, res) => {
-  const configs = db.prepare('SELECT * FROM config').all()
-  const configObj: any = {}
-  configs.forEach((c: any) => {
-    configObj[c.key] = c.value
-  })
-  res.json(configObj)
+app.get('/api/config', async (req, res) => {
+  try {
+    const { data: configs, error } = await supabase
+      .from('config')
+      .select('*')
+
+    if (error) throw error
+
+    const configObj: any = {}
+    configs?.forEach((c: any) => {
+      configObj[c.key] = c.value
+    })
+    res.json(configObj)
+  } catch (error: any) {
+    console.error('Error fetching config:', error)
+    res.status(500).json({ error: error.message })
+  }
 })
 
 // DISABLED - Achievements coming soon
@@ -1172,18 +1467,31 @@ if (!isDev) {
 }
 
 // WebSocket
-wss.on('connection', (ws) => {
+wss.on('connection', async (ws) => {
   // Send initial prices for all tokens
-  const tokens = db.prepare('SELECT symbol, current_price FROM tokens WHERE is_active = 1').all() as { symbol: string, current_price: number }[]
-  const prices: Record<string, number> = {}
-  tokens.forEach(t => {
-    prices[t.symbol] = t.current_price
-  })
+  try {
+    const { data: tokens, error } = await supabase
+      .from('tokens')
+      .select('symbol, current_price')
+      .eq('is_active', 1)
 
-  ws.send(JSON.stringify({
-    prices,
-    timestamp: Date.now()
-  }))
+    if (error) {
+      console.error('Error fetching tokens for WebSocket:', error)
+      return
+    }
+
+    const prices: Record<string, number> = {}
+    tokens?.forEach(t => {
+      prices[t.symbol] = t.current_price
+    })
+
+    ws.send(JSON.stringify({
+      prices,
+      timestamp: Date.now()
+    }))
+  } catch (error) {
+    console.error('WebSocket connection error:', error)
+  }
 })
 
 const PORT = process.env.PORT || 3000
