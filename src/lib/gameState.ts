@@ -76,9 +76,12 @@ export class GameState {
 
   // Initialize player or get existing state
   async initPlayer(fid: number): Promise<PlayerState> {
+    console.log('🎮 [GameState] Initializing player with FID:', fid)
+
     if (!playerStates.has(fid)) {
       // Fetch from database
       try {
+        console.log('📡 [GameState] Fetching player data from API...')
         const [playerResponse, positionsResponse, priceResponse] = await Promise.all([
           fetch(`${API_BASE}/player/${fid}`),
           fetch(`${API_BASE}/positions/${fid}/open`),
@@ -90,7 +93,11 @@ export class GameState {
         const priceData = await priceResponse.json()
         const currentPrice = priceData.price
 
+        console.log('📥 [GameState] Player data from DB:', data)
+        console.log('📥 [GameState] Open positions from DB:', dbPositions)
+
         if (!data) {
+          console.log('⚠️ [GameState] No player data found - creating new player with initial cash')
           const initialState: PlayerState = {
             fid,
             cash: INITIAL_CASH,
@@ -162,9 +169,11 @@ export class GameState {
           pnl: pnl,
           pnlPercent: pnlPercent,
         }
+        console.log('✅ [GameState] Player state loaded - Cash:', initialState.cash, 'Total Value:', initialState.totalValue)
         playerStates.set(fid, initialState)
         return initialState
       } catch (error) {
+        console.error('❌ [GameState] Error loading player:', error)
         const initialState: PlayerState = {
           fid,
           cash: INITIAL_CASH,
@@ -177,6 +186,7 @@ export class GameState {
         return initialState
       }
     }
+    console.log('♻️ [GameState] Returning cached player state - Cash:', playerStates.get(fid)!.cash)
     return playerStates.get(fid)!
   }
 
@@ -249,7 +259,8 @@ export class GameState {
 
     // Save to database
     try {
-      await fetch(`${API_BASE}/position/open`, {
+      console.log('💾 [GameState] Saving position to DB:', position.id, 'Type:', position.type)
+      const posResponse = await fetch(`${API_BASE}/position/open`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -263,9 +274,11 @@ export class GameState {
           collateral: position.collateral,
         }),
       })
+      console.log('📡 [GameState] Position save response:', posResponse.status, posResponse.ok)
 
       // Update player cash in database
-      await fetch(`${API_BASE}/player/${fid}/update`, {
+      console.log('💾 [GameState] Updating player cash to:', state.cash)
+      const updateResponse = await fetch(`${API_BASE}/player/${fid}/update`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -273,7 +286,10 @@ export class GameState {
           high_score: state.totalValue > INITIAL_CASH ? state.totalValue : INITIAL_CASH,
         }),
       })
+      const updateResult = await updateResponse.json()
+      console.log('📡 [GameState] Player update response:', updateResponse.status, updateResult)
     } catch (error) {
+      console.error('❌ [GameState] Error saving to DB:', error)
       // Continue without DB
     }
 
@@ -328,7 +344,8 @@ export class GameState {
 
     // Save to database
     try {
-      await fetch(`${API_BASE}/position/close`, {
+      console.log('💾 [GameState] Closing position in DB:', position.id, 'PNL:', finalPnl)
+      const closeResponse = await fetch(`${API_BASE}/position/close`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -338,9 +355,11 @@ export class GameState {
           is_liquidated: false,
         }),
       })
+      console.log('📡 [GameState] Position close response:', closeResponse.status, closeResponse.ok)
 
       // Update player cash and high score
-      await fetch(`${API_BASE}/player/${fid}/update`, {
+      console.log('💾 [GameState] Updating player cash to:', state.cash, 'after closing position')
+      const updateResponse = await fetch(`${API_BASE}/player/${fid}/update`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -348,7 +367,10 @@ export class GameState {
           high_score: Math.max(state.totalValue, state.totalValue > INITIAL_CASH ? state.totalValue : INITIAL_CASH),
         }),
       })
+      const updateResult = await updateResponse.json()
+      console.log('📡 [GameState] Player update response:', updateResponse.status, updateResult)
     } catch (error) {
+      console.error('❌ [GameState] Error saving to DB:', error)
       // Continue without DB
     }
 
