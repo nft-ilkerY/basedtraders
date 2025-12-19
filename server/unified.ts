@@ -374,18 +374,29 @@ app.get('/api/price', async (req, res) => {
 
 app.get('/api/player/:fid', async (req, res) => {
   try {
+    const fid = parseInt(req.params.fid)
+    console.log('📥 Fetching player with FID:', fid)
+
     const { data: player, error } = await supabase
       .from('players')
       .select('*')
-      .eq('farcaster_fid', req.params.fid)
+      .eq('farcaster_fid', fid)
       .single()
 
-    if (error || !player) {
+    if (error) {
+      console.log('⚠️ Player not found or error:', error.message)
       return res.json(null)
     }
+
+    if (!player) {
+      console.log('⚠️ No player data returned')
+      return res.json(null)
+    }
+
+    console.log('✅ Player found - Cash:', player.cash)
     res.json(player)
   } catch (error: any) {
-    console.error('Error fetching player:', error)
+    console.error('❌ Error fetching player:', error)
     res.json(null)
   }
 })
@@ -443,7 +454,10 @@ app.post('/api/player/create', async (req, res) => {
 
 app.post('/api/player/:fid/update', async (req, res) => {
   try {
+    const fid = parseInt(req.params.fid)
     const { cash, high_score } = req.body
+
+    console.log('💾 Updating player FID:', fid, '- Cash:', cash, '- High Score:', high_score)
 
     const { error } = await supabase
       .from('players')
@@ -452,12 +466,17 @@ app.post('/api/player/:fid/update', async (req, res) => {
         high_score,
         updated_at: Date.now()
       })
-      .eq('farcaster_fid', req.params.fid)
+      .eq('farcaster_fid', fid)
 
-    if (error) throw error
+    if (error) {
+      console.error('❌ Error updating player:', error)
+      throw error
+    }
+
+    console.log('✅ Player updated successfully')
     res.json({ success: true })
   } catch (error: any) {
-    console.error('Error updating player:', error)
+    console.error('❌ Error updating player:', error)
     res.status(500).json({ error: error.message })
   }
 })
@@ -523,10 +542,12 @@ app.post('/api/position/close', async (req, res) => {
 
 app.get('/api/positions/:fid', async (req, res) => {
   try {
+    const fid = parseInt(req.params.fid)
+
     const { data: positions, error } = await supabase
       .from('positions')
       .select('*')
-      .eq('player_fid', req.params.fid)
+      .eq('player_fid', fid)
       .order('opened_at', { ascending: false })
 
     if (error) throw error
@@ -539,11 +560,13 @@ app.get('/api/positions/:fid', async (req, res) => {
 
 app.get('/api/positions/:fid/open', async (req, res) => {
   try {
+    const fid = parseInt(req.params.fid)
+
     // Get positions from Supabase
     const { data: positions, error: posError } = await supabase
       .from('positions')
       .select('*')
-      .eq('player_fid', req.params.fid)
+      .eq('player_fid', fid)
       .is('closed_at', null)
       .order('opened_at', { ascending: false })
 
@@ -574,11 +597,13 @@ app.get('/api/positions/:fid/open', async (req, res) => {
 
 app.get('/api/positions/:fid/closed', async (req, res) => {
   try {
+    const fid = parseInt(req.params.fid)
+
     // Get closed positions from Supabase
     const { data: positions, error: posError } = await supabase
       .from('positions')
       .select('*')
-      .eq('player_fid', req.params.fid)
+      .eq('player_fid', fid)
       .not('closed_at', 'is', null)
       .order('closed_at', { ascending: false })
 
@@ -609,7 +634,7 @@ app.get('/api/positions/:fid/closed', async (req, res) => {
 
 app.get('/api/player/:fid/stats', async (req, res) => {
   try {
-    const fid = req.params.fid
+    const fid = parseInt(req.params.fid)
 
     // Get player from Supabase
     const { data: player, error: playerError } = await supabase
@@ -620,7 +645,7 @@ app.get('/api/player/:fid/stats', async (req, res) => {
 
     if (playerError || !player) {
       return res.json({
-        farcaster_fid: parseInt(fid),
+        farcaster_fid: fid,
         cash: 250,
         high_score: 250,
         created_at: Date.now(),
@@ -681,7 +706,7 @@ app.get('/api/player/:fid/stats', async (req, res) => {
 
 app.post('/api/player/:fid/submit', async (req, res) => {
   try {
-    const fid = req.params.fid
+    const fid = parseInt(req.params.fid)
     const { cash } = req.body
 
     // Get all players
