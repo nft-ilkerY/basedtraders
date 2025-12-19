@@ -64,23 +64,33 @@ export default function TradingInterface({ profile, isLoggedIn }: TradingInterfa
   useEffect(() => {
     if (!selectedToken) return
 
-    // Get initial price from price engine
-    const initialPrice = priceEngine.getCurrentPrice(selectedToken.symbol)
-    setCurrentPrice(initialPrice)
+    // Start price engine first
+    priceEngine.start()
 
-    // Create initial price history with 120 data points
-    // Start with the initial price and add slight variations to simulate historical data
-    const history: number[] = []
-    let price = initialPrice
-    for (let i = 0; i < 120; i++) {
-      // Add slight random variation (±0.1% per point)
-      const variation = (Math.random() - 0.5) * 0.002
-      price = price * (1 + variation)
-      history.push(price)
-    }
+    // Subscribe to get the first real price, then create history
+    const unsubscribe = priceEngine.subscribe(selectedToken.symbol, (firstRealPrice) => {
+      setCurrentPrice(firstRealPrice)
 
-    setPriceHistory(history)
-    setHistoryLoaded(true)
+      // Create realistic price history working backwards from current price
+      // This simulates past price movements
+      const history: number[] = []
+      let price = firstRealPrice
+
+      // Work backwards to create 120 historical points
+      for (let i = 119; i >= 0; i--) {
+        history.unshift(price)
+
+        // Add realistic backward variation (±0.05% to ±0.2% per point)
+        const variation = (Math.random() - 0.5) * (Math.random() * 0.003 + 0.001)
+        price = price * (1 + variation)
+      }
+
+      setPriceHistory(history)
+      setHistoryLoaded(true)
+
+      // Unsubscribe after getting first price
+      unsubscribe()
+    })
   }, [selectedToken])
 
   // Initialize player when Farcaster connects
