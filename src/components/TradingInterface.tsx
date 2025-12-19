@@ -586,7 +586,7 @@ export default function TradingInterface({ profile, isLoggedIn }: TradingInterfa
                       const castText = `🎯 Just closed a ${shareModal.leverage}x ${shareModal.token} position with +$${shareModal.profit.toFixed(2)} profit (+${shareModal.profitPercent.toFixed(1)}%) on @basedtraders! 💰\n\nThink you can do better?\n\nhttps://farcaster.xyz/miniapps/GlmJsUyW-yPo/based-traders`
 
                       // Generate share image URL with parameters
-                      const imageUrl = `https://basedtraders.fun/api/share-image-png?token=${encodeURIComponent(shareModal.token)}&leverage=${shareModal.leverage}&profit=${shareModal.profit.toFixed(2)}&profitPercent=${shareModal.profitPercent.toFixed(2)}`
+                      const imageUrl = `https://basetraders-hcniclcms-ggbrotrs-projects.vercel.app/api/share-image-png?token=${encodeURIComponent(shareModal.token)}&leverage=${shareModal.leverage}&profit=${shareModal.profit.toFixed(2)}&profitPercent=${shareModal.profitPercent.toFixed(2)}`
 
                       await sdk.actions.composeCast({
                         text: castText,

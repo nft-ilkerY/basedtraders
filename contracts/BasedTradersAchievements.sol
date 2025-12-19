@@ -91,7 +91,7 @@ contract BasedTradersAchievements is ERC721URIStorage, Ownable {
         // Set token URI (points to backend metadata endpoint)
         string memory uri = string(
             abi.encodePacked(
-                "https://basedtraders.fun/api/nft-metadata/",
+                "https://basetraders-hcniclcms-ggbrotrs-projects.vercel.app/api/nft-metadata/",
                 _toString(achievementId)
             )
         );

@@ -918,8 +918,8 @@ app.get('/api/player/:fid/achievements', (req, res) => {
 //   const metadata = {
 //     name: `${achievement.name} Achievement`,
 //     description: achievement.description,
-//     image: `https://basedtraders.fun/achievements/${achievementId}.png`, // You'll need to upload these images
-//     external_url: 'https://basedtraders.fun',
+//     image: `https://basetraders-hcniclcms-ggbrotrs-projects.vercel.app/achievements/${achievementId}.png`, // You'll need to upload these images
+//     external_url: 'https://basetraders-hcniclcms-ggbrotrs-projects.vercel.app',
 //     attributes: [
 //       {
 //         trait_type: 'Rarity',
@@ -952,7 +952,7 @@ app.get('/api/share-image', async (req, res) => {
   const profit = req.query.profit as string || '0'
   const profitPercent = req.query.profitPercent as string || '0'
 
-  const imageUrl = `https://basedtraders.fun/api/share-image-png?token=${encodeURIComponent(token)}&leverage=${leverage}&profit=${profit}&profitPercent=${profitPercent}`
+  const imageUrl = `https://basetraders-hcniclcms-ggbrotrs-projects.vercel.app/api/share-image-png?token=${encodeURIComponent(token)}&leverage=${leverage}&profit=${profit}&profitPercent=${profitPercent}`
 
   const html = `
 <!DOCTYPE html>

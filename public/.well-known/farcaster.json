@@ -10,20 +10,20 @@
     "author": "ilkery",
     "authorUrl": "https://farcaster.xyz/ilkery",
     "description": "Play the ultimate trading game. Use leverage and become the top trader on Base",
-    "iconUrl": "https://basedtraders.fun/icon.png",
-    "homeUrl": "https://basedtraders.fun/",
-    "imageUrl": "https://basedtraders.fun/logo.png",
-    "splashImageUrl": "https://basedtraders.fun/logo.png",
+    "iconUrl": "https://basetraders-hcniclcms-ggbrotrs-projects.vercel.app/icon.png",
+    "homeUrl": "https://basetraders-hcniclcms-ggbrotrs-projects.vercel.app/",
+    "imageUrl": "https://basetraders-hcniclcms-ggbrotrs-projects.vercel.app/logo.png",
+    "splashImageUrl": "https://basetraders-hcniclcms-ggbrotrs-projects.vercel.app/logo.png",
     "splashBackgroundColor": "#0000FF",
     "subtitle": "Trading Game",
-    "heroImageUrl": "https://basedtraders.fun/logo.png",
+    "heroImageUrl": "https://basetraders-hcniclcms-ggbrotrs-projects.vercel.app/logo.png",
     "tagline": "Ultimate Trading Game on Base",
     "ogTitle": "BasedTraders",
     "ogDescription": "Play the ultimate trading game. Use leverage and become the top trader on Base",
-    "ogImageUrl": "https://basedtraders.fun/logo.png",
-    "webhookUrl": "https://basedtraders.fun/api/webhook",
+    "ogImageUrl": "https://basetraders-hcniclcms-ggbrotrs-projects.vercel.app/logo.png",
+    "webhookUrl": "https://basetraders-hcniclcms-ggbrotrs-projects.vercel.app/api/webhook",
     "license": "MIT",
-    "privacyPolicyUrl": "https://basedtraders.fun/",
+    "privacyPolicyUrl": "https://basetraders-hcniclcms-ggbrotrs-projects.vercel.app/",
     "tags": [
       "trading",
       "leverage",
@@ -32,8 +32,8 @@
       "crypto"
     ],
     "screenshotUrls": [
-      "https://basedtraders.fun/screenshot1.png",
-      "https://basedtraders.fun/screenshot2.png"
+      "https://basetraders-hcniclcms-ggbrotrs-projects.vercel.app/screenshot1.png",
+      "https://basetraders-hcniclcms-ggbrotrs-projects.vercel.app/screenshot2.png"
     ],
     "noindex": false,
     "primaryCategory": "productivity"
