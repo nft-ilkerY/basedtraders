@@ -36,9 +36,9 @@ based-traders.db
 .env.production
 .env.development
 .env*.local
-.env.example
 
-*.md
+# Keep .env.example - it's a template for others
+# !.env.example
 
 # Private Keys & Secrets
 *.pem
