@@ -404,6 +404,7 @@ app.get('/api/player/:fid', async (req, res) => {
 app.post('/api/player/create', async (req, res) => {
   try {
     const { username, fid, displayName, pfpUrl } = req.body
+    console.log('👤 [API] Player create/update request - FID:', fid, 'Username:', username)
 
     // Check if player exists
     const { data: existing, error: findError } = await supabase
@@ -413,6 +414,7 @@ app.post('/api/player/create', async (req, res) => {
       .single()
 
     if (existing && !findError) {
+      console.log('✅ [API] Player exists - Updating profile data. Current cash:', existing.cash)
       // Update existing player
       const { error: updateError } = await supabase
         .from('players')
@@ -424,10 +426,15 @@ app.post('/api/player/create', async (req, res) => {
         })
         .eq('farcaster_fid', fid)
 
-      if (updateError) throw updateError
+      if (updateError) {
+        console.error('❌ [API] Error updating player:', updateError)
+        throw updateError
+      }
+      console.log('✅ [API] Player updated successfully - Cash preserved:', existing.cash)
       return res.json(existing)
     }
 
+    console.log('🆕 [API] Creating new player with initial cash: 250')
     // Create new player
     const { data: newPlayer, error: insertError } = await supabase
       .from('players')
@@ -444,10 +451,14 @@ app.post('/api/player/create', async (req, res) => {
       .select()
       .single()
 
-    if (insertError) throw insertError
+    if (insertError) {
+      console.error('❌ [API] Error creating player:', insertError)
+      throw insertError
+    }
+    console.log('✅ [API] New player created successfully - FID:', fid)
     res.json(newPlayer)
   } catch (error: any) {
-    console.error('Error creating/updating player:', error)
+    console.error('❌ [API] Error in player create/update:', error)
     res.status(500).json({ error: error.message })
   }
 })

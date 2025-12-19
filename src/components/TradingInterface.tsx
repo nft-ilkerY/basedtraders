@@ -112,6 +112,7 @@ export default function TradingInterface({ profile, isLoggedIn }: TradingInterfa
   // Initialize player when Farcaster connects
   useEffect(() => {
     if (isLoggedIn && profile?.fid) {
+      console.log('🔄 [TradingInterface] Player login detected, FID:', profile.fid)
       setPlayerLoading(true)
 
       fetch('/api/player/create', {
@@ -124,19 +125,26 @@ export default function TradingInterface({ profile, isLoggedIn }: TradingInterfa
           pfpUrl: profile.pfpUrl,
         }),
       })
-      .then(response => response.json())
-      .then(() => {
+      .then(response => {
+        console.log('📡 [TradingInterface] Player create response:', response.status, response.ok)
+        return response.json()
+      })
+      .then((createResult) => {
+        console.log('✅ [TradingInterface] Player create result:', createResult)
         if (profile.fid) {
+          console.log('🎮 [TradingInterface] Calling gameState.initPlayer with FID:', profile.fid)
           return gameState.initPlayer(profile.fid)
         }
       })
       .then(state => {
+        console.log('🎯 [TradingInterface] GameState initialized:', state)
         if (state) {
           setPlayerState(state)
         }
         setPlayerLoading(false)
       })
-      .catch(() => {
+      .catch((error) => {
+        console.error('❌ [TradingInterface] Error during player initialization:', error)
         setPlayerLoading(false)
       })
     }
