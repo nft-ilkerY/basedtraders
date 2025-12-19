@@ -1,0 +1,101 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  font-family: 'Montserrat', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Custom Range Slider Styles */
+input[type="range"].slider {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  touch-action: pan-x;
+  -webkit-tap-highlight-color: transparent;
+}
+
+input[type="range"].slider::-webkit-slider-track {
+  width: 100%;
+  height: 8px;
+  background: transparent;
+  border-radius: 4px;
+}
+
+input[type="range"].slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  background: #ffffff;
+  border: 3px solid #0000FF;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 255, 0.5);
+  margin-top: 0;
+  transform: translateY(-50%);
+  position: relative;
+  top: 50%;
+  transition: none;
+  touch-action: pan-x;
+}
+
+input[type="range"].slider::-webkit-slider-thumb:active {
+  background: #0000FF;
+  transform: translateY(-50%) scale(1.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 255, 0.8);
+}
+
+input[type="range"].slider::-moz-range-track {
+  width: 100%;
+  height: 8px;
+  background: transparent;
+  border-radius: 4px;
+}
+
+input[type="range"].slider::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  background: #ffffff;
+  border: 3px solid #0000FF;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 255, 0.5);
+  transition: none;
+}
+
+input[type="range"].slider::-moz-range-thumb:active {
+  background: #0000FF;
+  transform: scale(1.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 255, 0.8);
+}
+
+/* Android-specific fixes */
+@supports (-webkit-touch-callout: none) {
+  input[type="range"].slider {
+    height: 40px;
+  }
+}
+
+/* Hide scrollbar but allow scrolling */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
+}

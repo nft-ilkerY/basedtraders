@@ -1,0 +1,44 @@
+{
+  "accountAssociation": {
+    "header": "eyJmaWQiOjMyNjgyMSwidHlwZSI6ImF1dGgiLCJrZXkiOiIweEQ5MDc5N0NBOWIyNDY4NzZFODQwQ0ZjNzRCOTZCMTdmYmI4M2UxN2EifQ",
+    "payload": "eyJkb21haW4iOiJiYXNlZHRyYWRlcnMuZnVuIn0",
+    "signature": "BMeCSAnFaNwgXwfROYtTVfteyZIstrJU9EnDboetnol+qpK39jPxRCxmlF3pM0mgULTrgU3U/cICTuaeDHmgShs="
+  },
+  "miniapp": {
+    "version": "1",
+    "name": "BasedTraders",
+    "author": "ilkery",
+    "authorUrl": "https://farcaster.xyz/ilkery",
+    "description": "Play the ultimate trading game. Use leverage and become the top trader on Base",
+    "iconUrl": "https://basedtraders.fun/icon.png",
+    "homeUrl": "https://basedtraders.fun/",
+    "imageUrl": "https://basedtraders.fun/logo.png",
+    "splashImageUrl": "https://basedtraders.fun/logo.png",
+    "splashBackgroundColor": "#0000FF",
+    "subtitle": "Trading Game",
+    "heroImageUrl": "https://basedtraders.fun/logo.png",
+    "tagline": "Ultimate Trading Game on Base",
+    "ogTitle": "BasedTraders",
+    "ogDescription": "Play the ultimate trading game. Use leverage and become the top trader on Base",
+    "ogImageUrl": "https://basedtraders.fun/logo.png",
+    "webhookUrl": "https://basedtraders.fun/api/webhook",
+    "license": "MIT",
+    "privacyPolicyUrl": "https://basedtraders.fun/",
+    "tags": [
+      "trading",
+      "leverage",
+      "base",
+      "defi",
+      "crypto"
+    ],
+    "screenshotUrls": [
+      "https://basedtraders.fun/screenshot1.png",
+      "https://basedtraders.fun/screenshot2.png"
+    ],
+    "noindex": false,
+    "primaryCategory": "productivity"
+  },
+  "baseBuilder": {
+    "ownerAddress": "0x126D089D2E260C1188f304DeFe39B9d96a47A17A"
+  }
+}
