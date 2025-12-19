@@ -1,246 +1,199 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import { createClient } from '@supabase/supabase-js'
 import dotenv from 'dotenv'
 
 dotenv.config()
 
-const SUPABASE_URL = process.env.SUPABASE_URL!
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY!
+const supabaseUrl = process.env.SUPABASE_URL!
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!
 
-if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
-  throw new Error('SUPABASE_URL and SUPABASE_SERVICE_KEY must be set in environment variables')
+if (!supabaseUrl || !supabaseServiceKey) {
+  throw new Error('Missing Supabase credentials. Please check your .env file.')
 }
 
-// Create Supabase client
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
+// Create Supabase client with service role key for backend operations
+export const supabase = createClient(supabaseUrl, supabaseServiceKey, {
   auth: {
-    persistSession: false,
-    autoRefreshToken: false
+    autoRefreshToken: false,
+    persistSession: false
   }
 })
 
-// Helper function to convert Supabase results to match SQLite format
+// SQLite-like compatibility layer for easier migration
 class SupabaseDB {
-  private client: SupabaseClient
-
-  constructor(client: SupabaseClient) {
-    this.client = client
-  }
-
-  // Prepare-like interface for compatibility
+  /**
+   * Prepare a SQL-like query
+   * This is a compatibility layer to make migration easier
+   */
   prepare(sql: string) {
     return {
       get: async (...params: any[]) => {
-        const result = await this.executeQuery(sql, params, 'single')
-        return result
+        // Parse SQL and execute appropriate Supabase query
+        return await this.executeQuery(sql, params, 'single')
       },
       all: async (...params: any[]) => {
-        const result = await this.executeQuery(sql, params, 'multiple')
-        return result || []
+        return await this.executeQuery(sql, params, 'multiple')
       },
       run: async (...params: any[]) => {
-        const result = await this.executeQuery(sql, params, 'execute')
-        return { changes: result?.count || 0, lastInsertRowid: result?.id }
+        return await this.executeQuery(sql, params, 'execute')
       }
     }
   }
 
-  private async executeQuery(sql: string, params: any[], type: 'single' | 'multiple' | 'execute') {
-    // Parse SQL and convert to Supabase query
-    // This is a simplified version - you may need to expand this
+  private async executeQuery(sql: string, params: any[], mode: 'single' | 'multiple' | 'execute') {
+    // Simple SQL parser for common operations
+    // This is a basic implementation - you may need to enhance it
 
     const sqlLower = sql.toLowerCase().trim()
 
-    // SELECT queries
+    // Handle SELECT queries
     if (sqlLower.startsWith('select')) {
-      return this.handleSelect(sql, params, type)
+      const table = this.extractTableName(sql)
+      let query = supabase.from(table).select('*')
+
+      // Handle WHERE conditions
+      if (sqlLower.includes('where')) {
+        // Simple WHERE parsing (extend as needed)
+        const whereMatch = sql.match(/WHERE\s+(\w+)\s*=\s*\?/i)
+        if (whereMatch && params.length > 0) {
+          const column = whereMatch[1]
+          query = query.eq(column, params[0])
+        }
+      }
+
+      // Handle ORDER BY
+      if (sqlLower.includes('order by')) {
+        const orderMatch = sql.match(/ORDER BY\s+(\w+)(?:\s+(ASC|DESC))?/i)
+        if (orderMatch) {
+          const column = orderMatch[1]
+          const direction = orderMatch[2]?.toLowerCase() === 'asc' ? true : false
+          query = query.order(column, { ascending: direction })
+        }
+      }
+
+      // Handle LIMIT
+      if (sqlLower.includes('limit')) {
+        const limitMatch = sql.match(/LIMIT\s+(\d+)/i)
+        if (limitMatch) {
+          query = query.limit(parseInt(limitMatch[1]))
+        }
+      }
+
+      const { data, error } = mode === 'single' ? await query.single() : await query
+
+      if (error && mode === 'single' && error.code === 'PGRST116') {
+        // No rows found
+        return null
+      }
+
+      if (error) throw error
+      return mode === 'single' ? data : data
     }
 
-    // INSERT queries
+    // Handle INSERT queries
     if (sqlLower.startsWith('insert')) {
-      return this.handleInsert(sql, params)
+      const table = this.extractTableName(sql)
+      const columns = this.extractColumns(sql)
+      const values = params
+
+      const insertData: any = {}
+      columns.forEach((col, idx) => {
+        insertData[col] = values[idx]
+      })
+
+      const { data, error } = await supabase.from(table).insert(insertData).select()
+
+      if (error) throw error
+
+      return {
+        lastInsertRowid: data?.[0]?.id,
+        changes: data ? 1 : 0
+      }
     }
 
-    // UPDATE queries
+    // Handle UPDATE queries
     if (sqlLower.startsWith('update')) {
-      return this.handleUpdate(sql, params)
+      const table = this.extractTableName(sql)
+      const setMatch = sql.match(/SET\s+(.+?)(?:WHERE|$)/i)
+      const whereMatch = sql.match(/WHERE\s+(.+)$/i)
+
+      if (!setMatch) throw new Error('Invalid UPDATE query')
+
+      // Parse SET clause
+      const setPairs = setMatch[1].split(',').map(p => p.trim())
+      const updateData: any = {}
+      let paramIndex = 0
+
+      setPairs.forEach(pair => {
+        const [column] = pair.split('=').map(p => p.trim())
+        updateData[column.replace(/['"]/g, '')] = params[paramIndex++]
+      })
+
+      let query = supabase.from(table).update(updateData)
+
+      // Parse WHERE clause
+      if (whereMatch) {
+        const whereClause = whereMatch[1]
+        const whereColumn = whereClause.split('=')[0].trim()
+        const whereValue = params[paramIndex]
+        query = query.eq(whereColumn, whereValue)
+      }
+
+      const { error } = await query
+
+      if (error) throw error
+
+      return { changes: 1 }
     }
 
-    // DELETE queries
+    // Handle DELETE queries
     if (sqlLower.startsWith('delete')) {
-      return this.handleDelete(sql, params)
+      const table = this.extractTableName(sql)
+      const whereMatch = sql.match(/WHERE\s+(.+)$/i)
+
+      let query = supabase.from(table).delete()
+
+      if (whereMatch) {
+        const whereClause = whereMatch[1]
+        const whereColumn = whereClause.split('=')[0].trim()
+        const whereValue = params[0]
+        query = query.eq(whereColumn, whereValue)
+      }
+
+      const { error } = await query
+
+      if (error) throw error
+
+      return { changes: 1 }
     }
 
     throw new Error(`Unsupported SQL query: ${sql}`)
   }
 
-  private async handleSelect(sql: string, params: any[], type: 'single' | 'multiple') {
-    // Extract table name
-    const tableMatch = sql.match(/from\s+(\w+)/i)
-    if (!tableMatch) throw new Error('Could not extract table name')
+  private extractTableName(sql: string): string {
+    const fromMatch = sql.match(/FROM\s+(\w+)/i)
+    const intoMatch = sql.match(/INTO\s+(\w+)/i)
+    const updateMatch = sql.match(/UPDATE\s+(\w+)/i)
+    const deleteMatch = sql.match(/DELETE\s+FROM\s+(\w+)/i)
 
-    const tableName = tableMatch[1]
-    let query = this.client.from(tableName).select('*')
-
-    // Handle WHERE clause
-    if (sql.includes('WHERE')) {
-      const whereMatch = sql.match(/where\s+(.+?)(?:order|limit|$)/i)
-      if (whereMatch) {
-        const whereClause = whereMatch[1].trim()
-        query = this.applyWhereClause(query, whereClause, params)
-      }
-    }
-
-    // Handle ORDER BY
-    if (sql.includes('ORDER BY')) {
-      const orderMatch = sql.match(/order by\s+(.+?)(?:limit|$)/i)
-      if (orderMatch) {
-        const [column, direction] = orderMatch[1].trim().split(/\s+/)
-        query = query.order(column, { ascending: direction?.toLowerCase() !== 'desc' })
-      }
-    }
-
-    // Handle LIMIT
-    if (sql.includes('LIMIT')) {
-      const limitMatch = sql.match(/limit\s+(\d+)/i)
-      if (limitMatch) {
-        query = query.limit(parseInt(limitMatch[1]))
-      }
-    }
-
-    const { data, error } = type === 'single' ? await query.single() : await query
-
-    if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
-      throw error
-    }
-
-    return type === 'single' ? data : data || []
+    return (fromMatch || intoMatch || updateMatch || deleteMatch)?.[1] || 'unknown'
   }
 
-  private applyWhereClause(query: any, whereClause: string, params: any[]) {
-    // Simple parameter substitution (? -> params)
-    let paramIndex = 0
-    const conditions = whereClause.split(/\s+and\s+/i)
-
-    conditions.forEach(condition => {
-      const eqMatch = condition.match(/(\w+)\s*=\s*\?/)
-      if (eqMatch && paramIndex < params.length) {
-        query = query.eq(eqMatch[1], params[paramIndex++])
-      }
-
-      const gtMatch = condition.match(/(\w+)\s*>\s*\?/)
-      if (gtMatch && paramIndex < params.length) {
-        query = query.gt(gtMatch[1], params[paramIndex++])
-      }
-
-      const ltMatch = condition.match(/(\w+)\s*<\s*\?/)
-      if (ltMatch && paramIndex < params.length) {
-        query = query.lt(ltMatch[1], params[paramIndex++])
-      }
-
-      const isNullMatch = condition.match(/(\w+)\s+is\s+null/i)
-      if (isNullMatch) {
-        query = query.is(isNullMatch[1], null)
-      }
-
-      const isNotNullMatch = condition.match(/(\w+)\s+is\s+not\s+null/i)
-      if (isNotNullMatch) {
-        query = query.not(isNotNullMatch[1], 'is', null)
-      }
-    })
-
-    return query
+  private extractColumns(sql: string): string[] {
+    const match = sql.match(/\(([^)]+)\)/i)
+    if (!match) return []
+    return match[1].split(',').map(c => c.trim())
   }
 
-  private async handleInsert(sql: string, params: any[]) {
-    const tableMatch = sql.match(/insert into\s+(\w+)/i)
-    if (!tableMatch) throw new Error('Could not extract table name')
-
-    const tableName = tableMatch[1]
-    const columnsMatch = sql.match(/\(([^)]+)\)\s*values/i)
-    const valuesMatch = sql.match(/values\s*\(([^)]+)\)/i)
-
-    if (!columnsMatch || !valuesMatch) {
-      throw new Error('Could not parse INSERT statement')
-    }
-
-    const columns = columnsMatch[1].split(',').map(c => c.trim())
-    const data: any = {}
-
-    columns.forEach((col, i) => {
-      data[col] = params[i]
-    })
-
-    const { data: result, error } = await this.client
-      .from(tableName)
-      .insert(data)
-      .select()
-      .single()
-
-    if (error) throw error
-
-    return { id: result?.id, count: 1 }
-  }
-
-  private async handleUpdate(sql: string, params: any[]) {
-    const tableMatch = sql.match(/update\s+(\w+)/i)
-    if (!tableMatch) throw new Error('Could not extract table name')
-
-    const tableName = tableMatch[1]
-    const setMatch = sql.match(/set\s+(.+?)\s+where/i)
-    const whereMatch = sql.match(/where\s+(.+)$/i)
-
-    if (!setMatch) throw new Error('Could not parse SET clause')
-
-    const setClause = setMatch[1]
-    const updates = setClause.split(',').map(s => s.trim())
-    const data: any = {}
-    let paramIndex = 0
-
-    updates.forEach(update => {
-      const [column] = update.split('=').map(s => s.trim())
-      data[column] = params[paramIndex++]
-    })
-
-    let query = this.client.from(tableName).update(data)
-
-    if (whereMatch) {
-      query = this.applyWhereClause(query, whereMatch[1], params.slice(paramIndex))
-    }
-
-    const { data: result, error } = await query
-
-    if (error) throw error
-
-    return { count: result?.length || 0 }
-  }
-
-  private async handleDelete(sql: string, params: any[]) {
-    const tableMatch = sql.match(/delete from\s+(\w+)/i)
-    if (!tableMatch) throw new Error('Could not extract table name')
-
-    const tableName = tableMatch[1]
-    const whereMatch = sql.match(/where\s+(.+)$/i)
-
-    let query = this.client.from(tableName).delete()
-
-    if (whereMatch) {
-      query = this.applyWhereClause(query, whereMatch[1], params)
-    }
-
-    const { data: result, error } = await query
-
-    if (error) throw error
-
-    return { count: result?.length || 0 }
-  }
-
-  // Direct Supabase client access for complex queries
-  get raw() {
-    return this.client
+  /**
+   * Execute raw SQL (for compatibility)
+   * Note: Supabase doesn't support arbitrary SQL execution
+   */
+  exec(sql: string) {
+    console.warn('db.exec() is not supported with Supabase. Use specific methods instead.')
+    return this
   }
 }
 
-// Export a db object with prepare method for backwards compatibility
-export const db = new SupabaseDB(supabase)
-export { supabase }
+const db = new SupabaseDB()
+
 export default db
