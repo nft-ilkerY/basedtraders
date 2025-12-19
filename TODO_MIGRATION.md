@@ -495,7 +495,7 @@ git push origin main
 ```
 □ Vercel Dashboard → Settings → Domains
 □ "Add Domain" tıkla
-□ Domain adını gir (örn: basetraders-hcniclcms-ggbrotrs-projects.vercel.app)
+□ Domain adını gir (örn: basetraders.vercel.app)
 □ DNS kayıtlarını güncelle (Cloudflare'de)
 □ SSL sertifikası otomatik oluşsun (2-5 dakika)
 ```

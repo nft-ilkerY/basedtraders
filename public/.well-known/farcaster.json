@@ -10,20 +10,20 @@
     "author": "ilkery",
     "authorUrl": "https://farcaster.xyz/ilkery",
     "description": "Play the ultimate trading game. Use leverage and become the top trader on Base",
-    "iconUrl": "https://basetraders-hcniclcms-ggbrotrs-projects.vercel.app/icon.png",
-    "homeUrl": "https://basetraders-hcniclcms-ggbrotrs-projects.vercel.app/",
-    "imageUrl": "https://basetraders-hcniclcms-ggbrotrs-projects.vercel.app/logo.png",
-    "splashImageUrl": "https://basetraders-hcniclcms-ggbrotrs-projects.vercel.app/logo.png",
+    "iconUrl": "https://basetraders.vercel.app/icon.png",
+    "homeUrl": "https://basetraders.vercel.app/",
+    "imageUrl": "https://basetraders.vercel.app/logo.png",
+    "splashImageUrl": "https://basetraders.vercel.app/logo.png",
     "splashBackgroundColor": "#0000FF",
     "subtitle": "Trading Game",
-    "heroImageUrl": "https://basetraders-hcniclcms-ggbrotrs-projects.vercel.app/logo.png",
+    "heroImageUrl": "https://basetraders.vercel.app/logo.png",
     "tagline": "Ultimate Trading Game on Base",
     "ogTitle": "BasedTraders",
     "ogDescription": "Play the ultimate trading game. Use leverage and become the top trader on Base",
-    "ogImageUrl": "https://basetraders-hcniclcms-ggbrotrs-projects.vercel.app/logo.png",
-    "webhookUrl": "https://basetraders-hcniclcms-ggbrotrs-projects.vercel.app/api/webhook",
+    "ogImageUrl": "https://basetraders.vercel.app/logo.png",
+    "webhookUrl": "https://basetraders.vercel.app/api/webhook",
     "license": "MIT",
-    "privacyPolicyUrl": "https://basetraders-hcniclcms-ggbrotrs-projects.vercel.app/",
+    "privacyPolicyUrl": "https://basetraders.vercel.app/",
     "tags": [
       "trading",
       "leverage",
@@ -32,8 +32,8 @@
       "crypto"
     ],
     "screenshotUrls": [
-      "https://basetraders-hcniclcms-ggbrotrs-projects.vercel.app/screenshot1.png",
-      "https://basetraders-hcniclcms-ggbrotrs-projects.vercel.app/screenshot2.png"
+      "https://basetraders.vercel.app/screenshot1.png",
+      "https://basetraders.vercel.app/screenshot2.png"
     ],
     "noindex": false,
     "primaryCategory": "productivity"

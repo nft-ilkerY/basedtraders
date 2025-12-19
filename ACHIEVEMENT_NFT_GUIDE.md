@@ -168,7 +168,7 @@ contract BasedTradersAchievements is ERC721URIStorage, Ownable {
 
         // Generate metadata URI
         string memory uri = string(abi.encodePacked(
-            "https://basetraders-hcniclcms-ggbrotrs-projects.vercel.app/api/nft-metadata/",
+            "https://basetraders.vercel.app/api/nft-metadata/",
             Strings.toString(achievementId)
         ));
         _setTokenURI(newTokenId, uri);
@@ -444,7 +444,7 @@ app.get('/api/nft-metadata/:achievementId', (req, res) => {
     1: {
       name: "First Trade Achievement",
       description: "Congratulations! You made your first trade on Based Traders.",
-      image: "https://basetraders-hcniclcms-ggbrotrs-projects.vercel.app/achievements/first-trade.png",
+      image: "https://basetraders.vercel.app/achievements/first-trade.png",
       attributes: [
         { trait_type: "Category", value: "Trade Milestone" },
         { trait_type: "Rarity", value: "Common" },
@@ -454,7 +454,7 @@ app.get('/api/nft-metadata/:achievementId', (req, res) => {
     2: {
       name: "Trader Achievement",
       description: "You've completed 10 trades! Keep trading!",
-      image: "https://basetraders-hcniclcms-ggbrotrs-projects.vercel.app/achievements/trader.png",
+      image: "https://basetraders.vercel.app/achievements/trader.png",
       attributes: [
         { trait_type: "Category", value: "Trade Milestone" },
         { trait_type: "Rarity", value: "Common" },
@@ -464,7 +464,7 @@ app.get('/api/nft-metadata/:achievementId', (req, res) => {
     3: {
       name: "Pro Trader Achievement",
       description: "50 trades completed! You're becoming a pro!",
-      image: "https://basetraders-hcniclcms-ggbrotrs-projects.vercel.app/achievements/pro-trader.png",
+      image: "https://basetraders.vercel.app/achievements/pro-trader.png",
       attributes: [
         { trait_type: "Category", value: "Trade Milestone" },
         { trait_type: "Rarity", value: "Rare" },
@@ -474,7 +474,7 @@ app.get('/api/nft-metadata/:achievementId', (req, res) => {
     4: {
       name: "Master Achievement",
       description: "100 trades! You're a trading master!",
-      image: "https://basetraders-hcniclcms-ggbrotrs-projects.vercel.app/achievements/master.png",
+      image: "https://basetraders.vercel.app/achievements/master.png",
       attributes: [
         { trait_type: "Category", value: "Trade Milestone" },
         { trait_type: "Rarity", value: "Epic" },
@@ -484,7 +484,7 @@ app.get('/api/nft-metadata/:achievementId', (req, res) => {
     5: {
       name: "Winner Achievement",
       description: "10 winning trades! You know what you're doing!",
-      image: "https://basetraders-hcniclcms-ggbrotrs-projects.vercel.app/achievements/winner.png",
+      image: "https://basetraders.vercel.app/achievements/winner.png",
       attributes: [
         { trait_type: "Category", value: "Performance" },
         { trait_type: "Rarity", value: "Rare" },
@@ -494,7 +494,7 @@ app.get('/api/nft-metadata/:achievementId', (req, res) => {
     6: {
       name: "Big Win Achievement",
       description: "Won $500+ in a single trade! Impressive!",
-      image: "https://basetraders-hcniclcms-ggbrotrs-projects.vercel.app/achievements/big-win.png",
+      image: "https://basetraders.vercel.app/achievements/big-win.png",
       attributes: [
         { trait_type: "Category", value: "Profit" },
         { trait_type: "Rarity", value: "Rare" },
@@ -504,7 +504,7 @@ app.get('/api/nft-metadata/:achievementId', (req, res) => {
     7: {
       name: "Profit Maker Achievement",
       description: "Reached $2000 balance! Great job!",
-      image: "https://basetraders-hcniclcms-ggbrotrs-projects.vercel.app/achievements/profit-maker.png",
+      image: "https://basetraders.vercel.app/achievements/profit-maker.png",
       attributes: [
         { trait_type: "Category", value: "Balance" },
         { trait_type: "Rarity", value: "Rare" },
@@ -514,7 +514,7 @@ app.get('/api/nft-metadata/:achievementId', (req, res) => {
     8: {
       name: "Diamond Hands Achievement",
       description: "$5000 balance! You have diamond hands!",
-      image: "https://basetraders-hcniclcms-ggbrotrs-projects.vercel.app/achievements/diamond-hands.png",
+      image: "https://basetraders.vercel.app/achievements/diamond-hands.png",
       attributes: [
         { trait_type: "Category", value: "Balance" },
         { trait_type: "Rarity", value: "Epic" },
@@ -524,7 +524,7 @@ app.get('/api/nft-metadata/:achievementId', (req, res) => {
     9: {
       name: "Sharp Trader Achievement",
       description: "60%+ win rate! You're sharp!",
-      image: "https://basetraders-hcniclcms-ggbrotrs-projects.vercel.app/achievements/sharp-trader.png",
+      image: "https://basetraders.vercel.app/achievements/sharp-trader.png",
       attributes: [
         { trait_type: "Category", value: "Performance" },
         { trait_type: "Rarity", value: "Epic" },

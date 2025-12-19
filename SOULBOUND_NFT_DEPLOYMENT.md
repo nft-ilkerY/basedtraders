@@ -151,7 +151,7 @@ public/achievements/
   └── 9.png  (Sharp Trader)
 ```
 
-Metadata endpoint zaten hazır: `https://basetraders-hcniclcms-ggbrotrs-projects.vercel.app/achievements/{id}.png`
+Metadata endpoint zaten hazır: `https://basetraders.vercel.app/achievements/{id}.png`
 
 ### Option B: IPFS
 

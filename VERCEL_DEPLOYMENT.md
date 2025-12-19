@@ -143,7 +143,7 @@ vercel --prod
 ### 1. Custom Domain Eklemek (İsteğe Bağlı)
 
 Vercel Dashboard → Settings → Domains:
-- Domain adınızı ekleyin (örn: `basetraders-hcniclcms-ggbrotrs-projects.vercel.app`)
+- Domain adınızı ekleyin (örn: `basetraders.vercel.app`)
 - DNS kayıtlarını güncelleyin
 - SSL sertifikası otomatik oluşturulur
 
