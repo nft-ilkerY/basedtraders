@@ -60,23 +60,27 @@ export default function TradingInterface({ profile, isLoggedIn }: TradingInterfa
     loadTokens()
   }, [])
 
-  // Load price history on mount and when token changes
+  // Initialize price history when token changes
   useEffect(() => {
     if (!selectedToken) return
 
-    const loadHistory = async () => {
-      try {
-        const response = await fetch(`/api/price?symbol=${selectedToken.symbol}`)
-        const data = await response.json()
-        setCurrentPrice(data.price)
-        setPriceHistory(data.history || [])
-        setHistoryLoaded(true)
-      } catch (error) {
-        console.error('Failed to load price history:', error)
-        setHistoryLoaded(true)
-      }
+    // Get initial price from price engine
+    const initialPrice = priceEngine.getCurrentPrice(selectedToken.symbol)
+    setCurrentPrice(initialPrice)
+
+    // Create initial price history with 120 data points
+    // Start with the initial price and add slight variations to simulate historical data
+    const history: number[] = []
+    let price = initialPrice
+    for (let i = 0; i < 120; i++) {
+      // Add slight random variation (±0.1% per point)
+      const variation = (Math.random() - 0.5) * 0.002
+      price = price * (1 + variation)
+      history.push(price)
     }
-    loadHistory()
+
+    setPriceHistory(history)
+    setHistoryLoaded(true)
   }, [selectedToken])
 
   // Initialize player when Farcaster connects
@@ -121,7 +125,7 @@ export default function TradingInterface({ profile, isLoggedIn }: TradingInterfa
       setPriceHistory((prev) => {
         // Only add if different from last price
         if (prev.length === 0 || prev[prev.length - 1] !== price) {
-          return [...prev.slice(-49), price] // Keep last 50 prices
+          return [...prev.slice(-119), price] // Keep last 120 prices
         }
         return prev
       })
