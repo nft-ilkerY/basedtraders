@@ -105,14 +105,17 @@ export default function Profile({ profile, isLoggedIn }: ProfileProps) {
 
         if (statsRes.ok) {
           statsData = await statsRes.json()
+          console.log('📊 Stats API Response:', statsData)
         }
         if (tradesRes.ok) {
           tradesData = await tradesRes.json()
+          console.log('📋 Trades API Response:', tradesData)
         }
         if (achievementsRes.ok) {
           achievementsData = await achievementsRes.json()
         }
       } catch (apiError) {
+        console.error('❌ API Error:', apiError)
         // Use memory data only
       }
 
@@ -158,6 +161,17 @@ export default function Profile({ profile, isLoggedIn }: ProfileProps) {
         avg_hold_time: avgHoldTime,
         total_pnl: totalPnl
       }
+
+      console.log('📈 Final Stats:', {
+        totalTrades,
+        winningTrades,
+        losingTrades,
+        totalVolume,
+        biggestWin,
+        biggestLoss,
+        totalPnl,
+        avgHoldTime
+      })
 
       setStats(finalStats)
       setTrades(Array.isArray(tradesData) ? tradesData : [])
