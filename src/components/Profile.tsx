@@ -580,19 +580,14 @@ export default function Profile({ profile, isLoggedIn }: ProfileProps) {
                       const imageResponse = await fetch(`https://basedtraders.onrender.com/api/share-image-png?${params}`)
                       const imageBlob = await imageResponse.blob()
 
-                      // Convert blob to base64 data URI
-                      const reader = new FileReader()
-                      const dataUriPromise = new Promise<string>((resolve) => {
-                        reader.onloadend = () => resolve(reader.result as string)
-                        reader.readAsDataURL(imageBlob)
-                      })
-                      const imageDataUri = await dataUriPromise
+                      // Create File object from blob with proper filename
+                      const imageFile = new File([imageBlob], 'trade-share.png', { type: 'image/png' })
 
                       const castText = `🎯 Just closed a ${shareModal.leverage}x ${shareModal.token} position with +$${shareModal.profit.toFixed(2)} profit (+${shareModal.profitPercent.toFixed(1)}%) on @basedtraders! 💰\n\nThink you can do better?`
 
                       await sdk.actions.composeCast({
                         text: castText,
-                        embeds: [imageDataUri, 'https://farcaster.xyz/miniapps/YgDPslIu3Xrt/basedtraders']
+                        embeds: [imageFile, 'https://farcaster.xyz/miniapps/YgDPslIu3Xrt/basedtraders']
                       })
                       setShareModal(null)
                     } catch (error) {
