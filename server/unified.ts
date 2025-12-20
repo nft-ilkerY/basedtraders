@@ -25,7 +25,7 @@ console.log('🔐 Admin FIDs loaded:', ADMIN_FIDS)
 
 // Share image storage configuration
 const SHARE_IMAGES_DIR = path.join(__dirname, '..', 'public', 'share-images')
-const IMAGE_MAX_AGE_MS = 24 * 60 * 60 * 1000 // 24 hours
+const IMAGE_AUTO_DELETE_MS = 2 * 60 * 1000 // 2 minutes - enough time for Warpcast to fetch
 
 // Ensure share-images directory exists
 if (!fs.existsSync(SHARE_IMAGES_DIR)) {
@@ -33,42 +33,27 @@ if (!fs.existsSync(SHARE_IMAGES_DIR)) {
   console.log('📁 Created share-images directory:', SHARE_IMAGES_DIR)
 }
 
-// Generate hash for image filename based on trade parameters
+// Generate unique hash for each share (includes timestamp)
 function generateImageHash(token: string, leverage: string, profit: string, profitPercent: string): string {
-  const data = `${token}-${leverage}-${profit}-${profitPercent}`
+  const timestamp = Date.now()
+  const randomSuffix = Math.random().toString(36).substring(7)
+  const data = `${token}-${leverage}-${profit}-${profitPercent}-${timestamp}-${randomSuffix}`
   return crypto.createHash('md5').update(data).digest('hex')
 }
 
-// Clean up old images (older than IMAGE_MAX_AGE_MS)
-function cleanupOldImages() {
-  try {
-    const files = fs.readdirSync(SHARE_IMAGES_DIR)
-    const now = Date.now()
-    let deletedCount = 0
-
-    files.forEach(file => {
-      const filePath = path.join(SHARE_IMAGES_DIR, file)
-      const stats = fs.statSync(filePath)
-      const fileAge = now - stats.mtimeMs
-
-      if (fileAge > IMAGE_MAX_AGE_MS) {
-        fs.unlinkSync(filePath)
-        deletedCount++
+// Schedule image deletion after delay
+function scheduleImageDeletion(imagePath: string, hash: string) {
+  setTimeout(() => {
+    try {
+      if (fs.existsSync(imagePath)) {
+        fs.unlinkSync(imagePath)
+        console.log(`🗑️ Auto-deleted share image: ${hash}`)
       }
-    })
-
-    if (deletedCount > 0) {
-      console.log(`🧹 Cleaned up ${deletedCount} old share images`)
+    } catch (error) {
+      console.error(`❌ Error deleting share image ${hash}:`, error)
     }
-  } catch (error) {
-    console.error('❌ Error cleaning up old images:', error)
-  }
+  }, IMAGE_AUTO_DELETE_MS)
 }
-
-// Run cleanup every hour
-setInterval(cleanupOldImages, 60 * 60 * 1000)
-// Run initial cleanup on startup
-cleanupOldImages()
 
 const app = express()
 const server = createServer(app)
@@ -167,11 +152,11 @@ app.get('/.well-known/farcaster.json', (req, res) => {
 
 app.use(express.json())
 
-// Serve share images statically with long cache
+// Serve share images statically (short cache since they auto-delete after 2 mins)
 app.use('/share-images', express.static(SHARE_IMAGES_DIR, {
-  maxAge: '24h',
-  etag: true,
-  lastModified: true
+  maxAge: '2m',
+  etag: false,
+  lastModified: false
 }))
 
 // Serve Farcaster Manifest with no-cache headers
@@ -1505,7 +1490,7 @@ app.get('/api/share-image', async (req, res) => {
   res.send(html)
 })
 
-// Share image PNG generation endpoint - saves to disk for reliable access
+// Share image PNG generation endpoint - generates, saves, and auto-deletes
 app.get('/api/share-image-png', async (req, res) => {
   const token = req.query.token as string || 'BATR'
   const leverage = req.query.leverage as string || '1'
@@ -1513,28 +1498,9 @@ app.get('/api/share-image-png', async (req, res) => {
   const profitPercent = req.query.profitPercent as string || '0'
   const format = req.query.format as string // 'json' or undefined (default: PNG)
 
-  // Generate hash-based filename
+  // Generate unique hash for this share
   const imageHash = generateImageHash(token, leverage, profit, profitPercent)
   const imagePath = path.join(SHARE_IMAGES_DIR, `${imageHash}.png`)
-
-  // Check if image already exists
-  if (fs.existsSync(imagePath)) {
-    console.log('✅ Image already exists:', imageHash)
-    // Update file modification time to keep it alive
-    fs.utimesSync(imagePath, new Date(), new Date())
-
-    // If format=json, return JSON with hash and URL
-    if (format === 'json') {
-      const imageUrl = `https://basedtraders.onrender.com/share-images/${imageHash}.png`
-      return res.json({ hash: imageHash, url: imageUrl })
-    }
-
-    // Otherwise serve the image
-    res.setHeader('Content-Type', 'image/png')
-    res.setHeader('Cache-Control', 'public, max-age=86400') // Cache for 24 hours
-    res.setHeader('Access-Control-Allow-Origin', '*')
-    return res.sendFile(imagePath)
-  }
 
   console.log('🎨 Generating new share image:', imageHash)
 
@@ -1606,6 +1572,9 @@ app.get('/api/share-image-png', async (req, res) => {
   try {
     fs.writeFileSync(imagePath, buffer)
     console.log('💾 Saved share image to disk:', imagePath)
+
+    // Schedule auto-deletion after 2 minutes (enough time for Warpcast to fetch)
+    scheduleImageDeletion(imagePath, imageHash)
   } catch (error) {
     console.error('❌ Error saving share image:', error)
   }
@@ -1619,7 +1588,7 @@ app.get('/api/share-image-png', async (req, res) => {
   // Otherwise send the image
   res.setHeader('Content-Type', 'image/png')
   res.setHeader('Content-Length', buffer.length.toString())
-  res.setHeader('Cache-Control', 'public, max-age=86400') // Cache for 24 hours
+  res.setHeader('Cache-Control', 'public, max-age=120') // Cache for 2 minutes
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.send(buffer)
 })
