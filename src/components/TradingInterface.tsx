@@ -626,19 +626,26 @@ export default function TradingInterface({ profile, isLoggedIn }: TradingInterfa
                         token: shareModal.token,
                         leverage: shareModal.leverage.toString(),
                         profit: shareModal.profit.toFixed(2),
-                        profitPercent: shareModal.profitPercent.toFixed(2),
-                        format: 'json'
+                        profitPercent: shareModal.profitPercent.toFixed(2)
                       })
 
-                      // Get image URL from backend (generates image and returns hash/URL)
-                      const response = await fetch(`https://basedtraders.onrender.com/api/share-image-png?${params}`)
-                      const { url: imageUrl } = await response.json()
+                      // Get image as blob from backend
+                      const imageResponse = await fetch(`https://basedtraders.onrender.com/api/share-image-png?${params}`)
+                      const imageBlob = await imageResponse.blob()
+
+                      // Convert blob to base64 data URI
+                      const reader = new FileReader()
+                      const dataUriPromise = new Promise<string>((resolve) => {
+                        reader.onloadend = () => resolve(reader.result as string)
+                        reader.readAsDataURL(imageBlob)
+                      })
+                      const imageDataUri = await dataUriPromise
 
                       const castText = `🎯 Just closed a ${shareModal.leverage}x ${shareModal.token} position with +$${shareModal.profit.toFixed(2)} profit (+${shareModal.profitPercent.toFixed(1)}%) on @basedtraders! 💰\n\nThink you can do better?`
 
                       await sdk.actions.composeCast({
                         text: castText,
-                        embeds: [imageUrl, 'https://farcaster.xyz/miniapps/YgDPslIu3Xrt/basedtraders']
+                        embeds: [imageDataUri, 'https://farcaster.xyz/miniapps/YgDPslIu3Xrt/basedtraders']
                       })
                       setShareModal(null)
                     } catch (error) {
