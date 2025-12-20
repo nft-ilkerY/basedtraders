@@ -23,15 +23,9 @@ const __dirname = path.dirname(__filename)
 const ADMIN_FIDS = process.env.ADMIN_FIDS?.split(',').map(fid => parseInt(fid.trim())).filter(fid => !isNaN(fid)) || []
 console.log('🔐 Admin FIDs loaded:', ADMIN_FIDS)
 
-// Share image storage configuration
-const SHARE_IMAGES_DIR = path.join(__dirname, '..', 'public', 'share-images')
-const IMAGE_AUTO_DELETE_MS = 2 * 60 * 1000 // 2 minutes - enough time for Warpcast to fetch
-
-// Ensure share-images directory exists
-if (!fs.existsSync(SHARE_IMAGES_DIR)) {
-  fs.mkdirSync(SHARE_IMAGES_DIR, { recursive: true })
-  console.log('📁 Created share-images directory:', SHARE_IMAGES_DIR)
-}
+// In-memory cache for share images (no disk storage)
+const imageCache = new Map<string, { buffer: Buffer, timestamp: number }>()
+const IMAGE_CACHE_TTL = 5 * 60 * 1000 // 5 minutes - enough time for Warpcast to fetch
 
 // Generate unique hash for each share (includes timestamp)
 function generateImageHash(token: string, leverage: string, profit: string, profitPercent: string): string {
@@ -41,19 +35,25 @@ function generateImageHash(token: string, leverage: string, profit: string, prof
   return crypto.createHash('md5').update(data).digest('hex')
 }
 
-// Schedule image deletion after delay
-function scheduleImageDeletion(imagePath: string, hash: string) {
-  setTimeout(() => {
-    try {
-      if (fs.existsSync(imagePath)) {
-        fs.unlinkSync(imagePath)
-        console.log(`🗑️ Auto-deleted share image: ${hash}`)
-      }
-    } catch (error) {
-      console.error(`❌ Error deleting share image ${hash}:`, error)
+// Clean up old cached images
+function cleanupImageCache() {
+  const now = Date.now()
+  let deletedCount = 0
+
+  for (const [hash, data] of imageCache.entries()) {
+    if (now - data.timestamp > IMAGE_CACHE_TTL) {
+      imageCache.delete(hash)
+      deletedCount++
     }
-  }, IMAGE_AUTO_DELETE_MS)
+  }
+
+  if (deletedCount > 0) {
+    console.log(`🗑️ Cleaned up ${deletedCount} cached images from memory`)
+  }
 }
+
+// Run cleanup every minute
+setInterval(cleanupImageCache, 60 * 1000)
 
 const app = express()
 const server = createServer(app)
@@ -152,12 +152,23 @@ app.get('/.well-known/farcaster.json', (req, res) => {
 
 app.use(express.json())
 
-// Serve share images statically (short cache since they auto-delete after 2 mins)
-app.use('/share-images', express.static(SHARE_IMAGES_DIR, {
-  maxAge: '2m',
-  etag: false,
-  lastModified: false
-}))
+// Serve cached share images from memory
+app.get('/share-images/:hash', (req, res) => {
+  const hash = req.params.hash.replace('.png', '')
+  const cached = imageCache.get(hash)
+
+  if (!cached) {
+    console.log('❌ Image not found in cache:', hash)
+    return res.status(404).send('Image not found')
+  }
+
+  console.log('✅ Serving cached image:', hash)
+  res.setHeader('Content-Type', 'image/png')
+  res.setHeader('Content-Length', cached.buffer.length.toString())
+  res.setHeader('Cache-Control', 'public, max-age=300')
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.send(cached.buffer)
+})
 
 // Serve Farcaster Manifest with no-cache headers
 app.get('/farcaster.json', (req, res) => {
@@ -1490,7 +1501,7 @@ app.get('/api/share-image', async (req, res) => {
   res.send(html)
 })
 
-// Share image PNG generation endpoint - generates, saves, and auto-deletes
+// Share image PNG generation endpoint - generates and caches in memory
 app.get('/api/share-image-png', async (req, res) => {
   const token = req.query.token as string || 'BATR'
   const leverage = req.query.leverage as string || '1'
@@ -1500,7 +1511,6 @@ app.get('/api/share-image-png', async (req, res) => {
 
   // Generate unique hash for this share
   const imageHash = generateImageHash(token, leverage, profit, profitPercent)
-  const imagePath = path.join(SHARE_IMAGES_DIR, `${imageHash}.png`)
 
   console.log('🎨 Generating new share image:', imageHash)
 
@@ -1566,18 +1576,15 @@ app.get('/api/share-image-png', async (req, res) => {
   ctx.fillText(`+$${profit}`, 1000, 460)
   ctx.fillText(`+${profitPercent}%`, 1000, 520)
 
-  // Convert to buffer and save to disk
+  // Convert to buffer and cache in memory
   const buffer = canvas.toBuffer('image/png')
 
-  try {
-    fs.writeFileSync(imagePath, buffer)
-    console.log('💾 Saved share image to disk:', imagePath)
-
-    // Schedule auto-deletion after 2 minutes (enough time for Warpcast to fetch)
-    scheduleImageDeletion(imagePath, imageHash)
-  } catch (error) {
-    console.error('❌ Error saving share image:', error)
-  }
+  // Store in memory cache
+  imageCache.set(imageHash, {
+    buffer,
+    timestamp: Date.now()
+  })
+  console.log('💾 Cached share image in memory:', imageHash, `(${imageCache.size} images in cache)`)
 
   // If format=json, return JSON with hash and URL
   if (format === 'json') {
@@ -1585,10 +1592,10 @@ app.get('/api/share-image-png', async (req, res) => {
     return res.json({ hash: imageHash, url: imageUrl })
   }
 
-  // Otherwise send the image
+  // Otherwise send the image directly
   res.setHeader('Content-Type', 'image/png')
   res.setHeader('Content-Length', buffer.length.toString())
-  res.setHeader('Cache-Control', 'public, max-age=120') // Cache for 2 minutes
+  res.setHeader('Cache-Control', 'public, max-age=300') // Cache for 5 minutes
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.send(buffer)
 })
