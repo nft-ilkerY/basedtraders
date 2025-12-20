@@ -404,13 +404,14 @@ app.get('/api/player/:fid', async (req, res) => {
 app.post('/api/player/create', async (req, res) => {
   try {
     const { username, fid, displayName, pfpUrl } = req.body
-    console.log('👤 [API] Player create/update request - FID:', fid, 'Username:', username)
+    const parsedFid = parseInt(fid)
+    console.log('👤 [API] Player create/update request - FID:', parsedFid, 'Username:', username)
 
     // Check if player exists
     const { data: existing, error: findError } = await supabase
       .from('players')
       .select('*')
-      .eq('farcaster_fid', fid)
+      .eq('farcaster_fid', parsedFid)
       .single()
 
     if (existing && !findError) {
@@ -424,7 +425,7 @@ app.post('/api/player/create', async (req, res) => {
           pfp_url: pfpUrl,
           updated_at: Date.now()
         })
-        .eq('farcaster_fid', fid)
+        .eq('farcaster_fid', parsedFid)
 
       if (updateError) {
         console.error('❌ [API] Error updating player:', updateError)
@@ -439,7 +440,7 @@ app.post('/api/player/create', async (req, res) => {
     const { data: newPlayer, error: insertError } = await supabase
       .from('players')
       .insert({
-        farcaster_fid: fid,
+        farcaster_fid: parsedFid,
         farcaster_username: username,
         display_name: displayName,
         pfp_url: pfpUrl,
@@ -455,7 +456,7 @@ app.post('/api/player/create', async (req, res) => {
       console.error('❌ [API] Error creating player:', insertError)
       throw insertError
     }
-    console.log('✅ [API] New player created successfully - FID:', fid)
+    console.log('✅ [API] New player created successfully - FID:', parsedFid)
     res.json(newPlayer)
   } catch (error: any) {
     console.error('❌ [API] Error in player create/update:', error)
@@ -495,6 +496,17 @@ app.post('/api/player/:fid/update', async (req, res) => {
 app.post('/api/position/open', async (req, res) => {
   try {
     const { id, player_fid, token_symbol, type, entry_price, leverage, size, collateral } = req.body
+    const parsedFid = parseInt(player_fid)
+    const parsedLeverage = parseInt(leverage)
+    console.log('📈 [API] Position open request:', {
+      id,
+      player_fid: parsedFid,
+      token_symbol,
+      type,
+      leverage: parsedLeverage,
+      size: size.toFixed(2),
+      collateral: collateral.toFixed(2)
+    })
 
     // Get token_id from symbol
     const { data: token, error: tokenError } = await supabase
@@ -504,27 +516,39 @@ app.post('/api/position/open', async (req, res) => {
       .single()
 
     if (tokenError || !token) {
+      console.error('❌ [API] Token not found:', token_symbol, tokenError)
       return res.status(400).json({ error: 'Invalid token' })
     }
 
+    console.log('✅ [API] Token found - ID:', token.id, 'Symbol:', token_symbol)
+
+    const positionData = {
+      id,
+      player_fid: parsedFid,
+      token_id: token.id,
+      type,
+      entry_price,
+      leverage: parsedLeverage,
+      size,
+      collateral,
+      opened_at: Date.now()
+    }
+
+    console.log('💾 [API] Inserting position into Supabase:', positionData)
+
     const { error: insertError } = await supabase
       .from('positions')
-      .insert({
-        id,
-        player_fid,
-        token_id: token.id,
-        type,
-        entry_price,
-        leverage,
-        size,
-        collateral,
-        opened_at: Date.now()
-      })
+      .insert(positionData)
 
-    if (insertError) throw insertError
+    if (insertError) {
+      console.error('❌ [API] Error inserting position:', insertError)
+      throw insertError
+    }
+
+    console.log('✅ [API] Position saved successfully to Supabase!')
     res.json({ success: true })
   } catch (error: any) {
-    console.error('Error opening position:', error)
+    console.error('❌ [API] Fatal error in position/open:', error)
     res.status(500).json({ error: error.message })
   }
 })
@@ -539,7 +563,7 @@ app.post('/api/position/close', async (req, res) => {
         closed_at: Date.now(),
         close_price,
         pnl,
-        is_liquidated: is_liquidated ? 1 : 0
+        is_liquidated: is_liquidated ? true : false
       })
       .eq('id', id)
 
