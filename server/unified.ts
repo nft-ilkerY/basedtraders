@@ -468,14 +468,16 @@ app.post('/api/player/:fid/update', async (req, res) => {
   try {
     const fid = parseInt(req.params.fid)
     const { cash, high_score } = req.body
+    const parsedCash = parseFloat(cash)
+    const parsedHighScore = parseFloat(high_score)
 
-    console.log('💾 Updating player FID:', fid, '- Cash:', cash, '- High Score:', high_score)
+    console.log('💾 Updating player FID:', fid, '- Cash:', parsedCash, '- High Score:', parsedHighScore)
 
     const { error } = await supabase
       .from('players')
       .update({
-        cash,
-        high_score,
+        cash: parsedCash,
+        high_score: parsedHighScore,
         updated_at: Date.now()
       })
       .eq('farcaster_fid', fid)
@@ -498,14 +500,19 @@ app.post('/api/position/open', async (req, res) => {
     const { id, player_fid, token_symbol, type, entry_price, leverage, size, collateral } = req.body
     const parsedFid = parseInt(player_fid)
     const parsedLeverage = parseInt(leverage)
+    const parsedEntryPrice = parseFloat(entry_price)
+    const parsedSize = parseFloat(size)
+    const parsedCollateral = parseFloat(collateral)
+
     console.log('📈 [API] Position open request:', {
       id,
       player_fid: parsedFid,
       token_symbol,
       type,
+      entry_price: parsedEntryPrice,
       leverage: parsedLeverage,
-      size: size.toFixed(2),
-      collateral: collateral.toFixed(2)
+      size: parsedSize,
+      collateral: parsedCollateral
     })
 
     // Get token_id from symbol
@@ -527,10 +534,10 @@ app.post('/api/position/open', async (req, res) => {
       player_fid: parsedFid,
       token_id: token.id,
       type,
-      entry_price,
+      entry_price: parsedEntryPrice,
       leverage: parsedLeverage,
-      size,
-      collateral,
+      size: parsedSize,
+      collateral: parsedCollateral,
       opened_at: Date.now()
     }
 
@@ -564,13 +571,15 @@ app.post('/api/position/open', async (req, res) => {
 app.post('/api/position/close', async (req, res) => {
   try {
     const { id, close_price, pnl, is_liquidated } = req.body
+    const parsedClosePrice = parseFloat(close_price)
+    const parsedPnl = parseFloat(pnl)
 
     const { error } = await supabase
       .from('positions')
       .update({
         closed_at: Date.now(),
-        close_price,
-        pnl,
+        close_price: parsedClosePrice,
+        pnl: parsedPnl,
         is_liquidated: is_liquidated ? true : false
       })
       .eq('id', id)
