@@ -45,7 +45,7 @@ export default function Leaderboard() {
   const loadLeaderboard = async () => {
     try {
       // Fetch leaderboard with time range filter from backend
-      const response = await fetch(`/api/leaderboard?range=${timeRange}`)
+      const response = await fetch(`https://basedtraders.onrender.com/api/leaderboard?range=${timeRange}`)
       if (response.ok) {
         const data = await response.json()
         setLeaderboard(data)

@@ -98,9 +98,9 @@ export default function Profile({ profile, isLoggedIn }: ProfileProps) {
 
       try {
         const [statsRes, tradesRes, achievementsRes] = await Promise.all([
-          fetch(`/api/player/${profile.fid}/stats`),
-          fetch(`/api/positions/${profile.fid}/closed`),
-          fetch(`/api/player/${profile.fid}/achievements`)
+          fetch(`https://basedtraders.onrender.com/api/player/${profile.fid}/stats`),
+          fetch(`https://basedtraders.onrender.com/api/positions/${profile.fid}/closed`),
+          fetch(`https://basedtraders.onrender.com/api/player/${profile.fid}/achievements`)
         ])
 
         if (statsRes.ok) {
