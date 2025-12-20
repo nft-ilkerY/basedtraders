@@ -428,11 +428,13 @@ class GlobalPriceEngine {
 }
 
 const priceEngine = new GlobalPriceEngine()
-priceEngine.start()
 
-// Start crypto price fetcher for real prices
+// Start crypto price fetcher for real prices FIRST (and wait for it)
 cryptoPriceFetcher.setDatabase(db)
-cryptoPriceFetcher.start()
+await cryptoPriceFetcher.start()
+
+// Then start price engine (will use real prices from Binance)
+priceEngine.start()
 
 // API Routes
 app.get('/api/price', async (req, res) => {
@@ -1250,6 +1252,48 @@ app.put('/api/admin/config/:key', isAdmin, async (req, res) => {
     res.json({ success: true })
   } catch (error: any) {
     res.status(400).json({ error: error.message })
+  }
+})
+
+// Admin: Sync real crypto prices from Binance immediately
+app.post('/api/admin/sync-crypto-prices', isAdmin, async (req, res) => {
+  try {
+    // Get all real crypto tokens
+    const { data: tokens, error } = await supabase
+      .from('tokens')
+      .select('id, symbol')
+      .eq('is_real_crypto', 1)
+      .eq('is_active', 1)
+
+    if (error) throw error
+
+    const updated: string[] = []
+    const failed: string[] = []
+
+    for (const token of tokens || []) {
+      const realPrice = cryptoPriceFetcher.getPrice(token.symbol)
+
+      if (realPrice > 0) {
+        // Update database with real price from Binance
+        await supabase
+          .from('tokens')
+          .update({ current_price: realPrice })
+          .eq('id', token.id)
+
+        updated.push(`${token.symbol}: $${realPrice}`)
+      } else {
+        failed.push(token.symbol)
+      }
+    }
+
+    res.json({
+      success: true,
+      updated,
+      failed,
+      message: `Updated ${updated.length} tokens, ${failed.length} failed`
+    })
+  } catch (error: any) {
+    res.status(500).json({ error: error.message })
   }
 })
 
