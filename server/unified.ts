@@ -1474,7 +1474,13 @@ app.get('/api/share-image', async (req, res) => {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Profitable Trade on Based Traders!</title>
 
-  <!-- Farcaster Frame -->
+  <!-- Farcaster Miniapp Embed -->
+  <meta property="fc:miniapp" content="vNext" />
+  <meta property="fc:miniapp:name" content="Based Traders" />
+  <meta property="fc:miniapp:image" content="${imageUrl}" />
+  <meta property="fc:miniapp:url" content="${miniappUrl}" />
+
+  <!-- Farcaster Frame (fallback) -->
   <meta property="fc:frame" content="vNext" />
   <meta property="fc:frame:image" content="${imageUrl}" />
   <meta property="fc:frame:image:aspect_ratio" content="1.91:1" />
