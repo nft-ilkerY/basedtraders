@@ -429,12 +429,37 @@ class GlobalPriceEngine {
 
 const priceEngine = new GlobalPriceEngine()
 
-// Start crypto price fetcher for real prices FIRST (and wait for it)
-cryptoPriceFetcher.setDatabase(db)
-await cryptoPriceFetcher.start()
+// Start crypto price fetcher for real prices FIRST (async IIFE to avoid top-level await)
+;(async () => {
+  cryptoPriceFetcher.setDatabase(db)
+  await cryptoPriceFetcher.start()
+  console.log('✅ Crypto price fetcher initialized')
 
-// Then start price engine (will use real prices from Binance)
-priceEngine.start()
+  // Force initial sync of real crypto prices from Binance to database
+  console.log('🔄 Syncing real crypto prices from Binance...')
+  const { data: tokens, error } = await supabase
+    .from('tokens')
+    .select('id, symbol')
+    .eq('is_real_crypto', 1)
+    .eq('is_active', 1)
+
+  if (!error && tokens) {
+    for (const token of tokens) {
+      const realPrice = cryptoPriceFetcher.getPrice(token.symbol)
+      if (realPrice > 0) {
+        await supabase
+          .from('tokens')
+          .update({ current_price: realPrice })
+          .eq('id', token.id)
+        console.log(`  ✅ ${token.symbol}: $${realPrice}`)
+      }
+    }
+  }
+
+  // Then start price engine (will use real prices from Binance)
+  priceEngine.start()
+  console.log('✅ Price engine started')
+})()
 
 // API Routes
 app.get('/api/price', async (req, res) => {
@@ -1125,11 +1150,17 @@ app.put('/api/admin/tokens/:id', isAdmin, async (req, res) => {
 // Admin: Delete token
 app.delete('/api/admin/tokens/:id', isAdmin, async (req, res) => {
   try {
+    const tokenId = parseInt(req.params.id)
+
+    if (isNaN(tokenId)) {
+      return res.status(400).json({ error: 'Invalid token ID' })
+    }
+
     // Check if there are any positions using this token
     const { count, error: countError } = await supabase
       .from('positions')
       .select('*', { count: 'exact', head: true })
-      .eq('token_id', req.params.id)
+      .eq('token_id', tokenId)
 
     if (countError) throw countError
 
@@ -1141,7 +1172,7 @@ app.delete('/api/admin/tokens/:id', isAdmin, async (req, res) => {
     const { error: historyError } = await supabase
       .from('price_history')
       .delete()
-      .eq('token_id', req.params.id)
+      .eq('token_id', tokenId)
 
     if (historyError) throw historyError
 
@@ -1149,7 +1180,7 @@ app.delete('/api/admin/tokens/:id', isAdmin, async (req, res) => {
     const { error: deleteError } = await supabase
       .from('tokens')
       .delete()
-      .eq('id', req.params.id)
+      .eq('id', tokenId)
 
     if (deleteError) throw deleteError
 
