@@ -135,7 +135,7 @@ export default function AdminPanel({ fid }: AdminPanelProps) {
     if (!settingsToken) return
 
     try {
-      const response = await fetch(`/api/admin/tokens/${settingsToken.id}`, {
+      const response = await fetch(`https://basedtraders.onrender.com/api/admin/tokens/${settingsToken.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -163,7 +163,7 @@ export default function AdminPanel({ fid }: AdminPanelProps) {
     if (!confirm('Are you sure you want to delete this token?')) return
 
     try {
-      const response = await fetch(`/api/admin/tokens/${tokenId}`, {
+      const response = await fetch(`https://basedtraders.onrender.com/api/admin/tokens/${tokenId}`, {
         method: 'DELETE',
         headers: {
           'x-fid': fid.toString()
