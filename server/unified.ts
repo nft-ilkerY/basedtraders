@@ -1043,15 +1043,33 @@ app.post('/api/admin/tokens', isAdmin, async (req, res) => {
 
     // If it's a real crypto, fetch real price and logo
     if (is_real_crypto) {
-      // Fetch real price from Binance via cryptoPriceFetcher
-      const realPrice = cryptoPriceFetcher.getPrice(symbol)
-      if (realPrice > 0) {
-        finalPrice = realPrice
-        console.log(`💰 [ADMIN] Got real price for ${symbol}: $${realPrice}`)
-      } else {
-        console.warn(`⚠️ [ADMIN] Could not get real price for ${symbol}, will retry after adding token`)
-        // Set a temporary price, will be updated by price engine
-        finalPrice = 1
+      // Fetch real price directly from Binance REST API
+      try {
+        const binancePriceUrl = `https://api.binance.com/api/v3/ticker/price?symbol=${symbol.toUpperCase()}USDT`
+        console.log(`🔍 [ADMIN] Fetching price from Binance: ${binancePriceUrl}`)
+
+        const priceResponse = await fetch(binancePriceUrl)
+
+        if (priceResponse.ok) {
+          const priceData = await priceResponse.json() as { symbol: string, price: string }
+          const binancePrice = parseFloat(priceData.price)
+
+          if (binancePrice > 0) {
+            finalPrice = binancePrice
+            console.log(`💰 [ADMIN] Got real price for ${symbol}: $${binancePrice}`)
+          } else {
+            throw new Error(`Invalid price returned from Binance: ${priceData.price}`)
+          }
+        } else {
+          const errorText = await priceResponse.text()
+          console.error(`❌ [ADMIN] Binance API error:`, errorText)
+          throw new Error(`Could not fetch price for ${symbol}. Make sure the symbol exists on Binance (e.g., BTC, ETH, SOL).`)
+        }
+      } catch (error: any) {
+        console.error(`❌ [ADMIN] Error fetching price for ${symbol}:`, error)
+        return res.status(400).json({
+          error: error.message || `Failed to fetch price for ${symbol} from Binance. Make sure it's a valid symbol.`
+        })
       }
 
       // Fetch logo
