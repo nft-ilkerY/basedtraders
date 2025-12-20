@@ -1039,9 +1039,22 @@ app.post('/api/admin/tokens', isAdmin, async (req, res) => {
 
   try {
     let logoUrl = null
+    let finalPrice = initial_price || 100 // Default 100 for game tokens
 
-    // If it's a real crypto, fetch logo from Binance
+    // If it's a real crypto, fetch real price and logo
     if (is_real_crypto) {
+      // Fetch real price from Binance via cryptoPriceFetcher
+      const realPrice = cryptoPriceFetcher.getPrice(symbol)
+      if (realPrice > 0) {
+        finalPrice = realPrice
+        console.log(`💰 [ADMIN] Got real price for ${symbol}: $${realPrice}`)
+      } else {
+        console.warn(`⚠️ [ADMIN] Could not get real price for ${symbol}, will retry after adding token`)
+        // Set a temporary price, will be updated by price engine
+        finalPrice = 1
+      }
+
+      // Fetch logo
       try {
         const binanceApiUrl = `https://api.binance.com/api/v3/exchangeInfo?symbol=${symbol}USDT`
         const response = await fetch(binanceApiUrl)
@@ -1075,12 +1088,20 @@ app.post('/api/admin/tokens', isAdmin, async (req, res) => {
       }
     }
 
+    // Ensure price is valid (positive number)
+    if (!finalPrice || finalPrice <= 0) {
+      console.error(`❌ [ADMIN] Invalid price: ${finalPrice}`)
+      return res.status(400).json({
+        error: `Invalid price. For game tokens, enter a positive number. For real crypto, make sure ${symbol} is available on Binance.`
+      })
+    }
+
     // Insert token with logo URL
     const tokenData = {
       symbol,
       name,
-      initial_price: initial_price || 0,
-      current_price: initial_price || 0,
+      initial_price: finalPrice,
+      current_price: finalPrice,
       is_active: 1,
       is_real_crypto: is_real_crypto ? 1 : 0,
       logo_url: logoUrl,
@@ -1111,7 +1132,7 @@ app.post('/api/admin/tokens', isAdmin, async (req, res) => {
       const timestamp = now - (i * 1000) // 1 second intervals
       priceHistoryRecords.push({
         token_id: tokenId,
-        price: initial_price,
+        price: finalPrice,
         timestamp
       })
     }
