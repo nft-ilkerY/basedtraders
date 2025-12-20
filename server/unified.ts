@@ -1413,7 +1413,7 @@ app.get('/api/share-image', async (req, res) => {
   const profit = req.query.profit as string || '0'
   const profitPercent = req.query.profitPercent as string || '0'
 
-  const imageUrl = `https://basetraders.vercel.app/api/share-image-png?token=${encodeURIComponent(token)}&leverage=${leverage}&profit=${profit}&profitPercent=${profitPercent}`
+  const imageUrl = `https://basedtraders.onrender.com/api/share-image-png?token=${encodeURIComponent(token)}&leverage=${leverage}&profit=${profit}&profitPercent=${profitPercent}`
 
   const html = `
 <!DOCTYPE html>
