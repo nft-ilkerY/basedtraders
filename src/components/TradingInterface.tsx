@@ -621,14 +621,25 @@ export default function TradingInterface({ profile, isLoggedIn }: TradingInterfa
                 <button
                   onClick={async () => {
                     try {
-                      // Generate direct PNG image URL
-                      const imageUrl = `https://basedtraders.onrender.com/api/share-image-png?token=${encodeURIComponent(shareModal.token)}&leverage=${shareModal.leverage}&profit=${shareModal.profit.toFixed(2)}&profitPercent=${shareModal.profitPercent.toFixed(2)}`
+                      // First, trigger image generation and get it saved
+                      const params = new URLSearchParams({
+                        token: shareModal.token,
+                        leverage: shareModal.leverage.toString(),
+                        profit: shareModal.profit.toFixed(2),
+                        profitPercent: shareModal.profitPercent.toFixed(2)
+                      })
+
+                      // Call the endpoint to ensure image is generated and cached
+                      await fetch(`https://basedtraders.onrender.com/api/share-image-png?${params}`)
+
+                      // Use Frame HTML URL for better Warpcast compatibility
+                      const frameUrl = `https://basedtraders.onrender.com/api/share-image?${params}`
 
                       const castText = `🎯 Just closed a ${shareModal.leverage}x ${shareModal.token} position with +$${shareModal.profit.toFixed(2)} profit (+${shareModal.profitPercent.toFixed(1)}%) on @basedtraders! 💰\n\nThink you can do better?`
 
                       await sdk.actions.composeCast({
                         text: castText,
-                        embeds: [imageUrl]
+                        embeds: [frameUrl]
                       })
                       setShareModal(null)
                     } catch (error) {
