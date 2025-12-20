@@ -23,9 +23,14 @@ const __dirname = path.dirname(__filename)
 const ADMIN_FIDS = process.env.ADMIN_FIDS?.split(',').map(fid => parseInt(fid.trim())).filter(fid => !isNaN(fid)) || []
 console.log('🔐 Admin FIDs loaded:', ADMIN_FIDS)
 
-// In-memory cache for share images (no disk storage)
-const imageCache = new Map<string, { buffer: Buffer, timestamp: number }>()
-const IMAGE_CACHE_TTL = 5 * 60 * 1000 // 5 minutes - enough time for Warpcast to fetch
+// Share images directory
+const SHARES_DIR = path.join(__dirname, '..', 'public', 'shares')
+
+// Create shares directory if it doesn't exist
+if (!fs.existsSync(SHARES_DIR)) {
+  fs.mkdirSync(SHARES_DIR, { recursive: true })
+  console.log('📁 Created shares directory:', SHARES_DIR)
+}
 
 // Generate unique hash for each share (includes timestamp)
 function generateImageHash(token: string, leverage: string, profit: string, profitPercent: string): string {
@@ -35,25 +40,38 @@ function generateImageHash(token: string, leverage: string, profit: string, prof
   return crypto.createHash('md5').update(data).digest('hex')
 }
 
-// Clean up old cached images
-function cleanupImageCache() {
+// Clean up old share images (delete files older than 5 minutes)
+function cleanupShareImages() {
   const now = Date.now()
+  const maxAge = 5 * 60 * 1000 // 5 minutes
   let deletedCount = 0
 
-  for (const [hash, data] of imageCache.entries()) {
-    if (now - data.timestamp > IMAGE_CACHE_TTL) {
-      imageCache.delete(hash)
-      deletedCount++
-    }
-  }
+  try {
+    const files = fs.readdirSync(SHARES_DIR)
 
-  if (deletedCount > 0) {
-    console.log(`🗑️ Cleaned up ${deletedCount} cached images from memory`)
+    for (const file of files) {
+      if (!file.endsWith('.png')) continue
+
+      const filePath = path.join(SHARES_DIR, file)
+      const stats = fs.statSync(filePath)
+      const age = now - stats.mtimeMs
+
+      if (age > maxAge) {
+        fs.unlinkSync(filePath)
+        deletedCount++
+      }
+    }
+
+    if (deletedCount > 0) {
+      console.log(`🗑️ Cleaned up ${deletedCount} old share images`)
+    }
+  } catch (error) {
+    console.error('Error cleaning up share images:', error)
   }
 }
 
 // Run cleanup every minute
-setInterval(cleanupImageCache, 60 * 1000)
+setInterval(cleanupShareImages, 60 * 1000)
 
 const app = express()
 const server = createServer(app)
@@ -152,23 +170,14 @@ app.get('/.well-known/farcaster.json', (req, res) => {
 
 app.use(express.json())
 
-// Serve cached share images from memory
-app.get('/share-images/:hash', (req, res) => {
-  const hash = req.params.hash.replace('.png', '')
-  const cached = imageCache.get(hash)
-
-  if (!cached) {
-    console.log('❌ Image not found in cache:', hash)
-    return res.status(404).send('Image not found')
+// Serve static share images from public/shares
+app.use('/shares', express.static(SHARES_DIR, {
+  maxAge: '5m',
+  setHeaders: (res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*')
+    res.setHeader('Cache-Control', 'public, max-age=300')
   }
-
-  console.log('✅ Serving cached image:', hash)
-  res.setHeader('Content-Type', 'image/png')
-  res.setHeader('Content-Length', cached.buffer.length.toString())
-  res.setHeader('Cache-Control', 'public, max-age=300')
-  res.setHeader('Access-Control-Allow-Origin', '*')
-  res.send(cached.buffer)
-})
+}))
 
 // Serve Farcaster Manifest with no-cache headers
 app.get('/farcaster.json', (req, res) => {
@@ -1514,7 +1523,7 @@ app.get('/api/share-image', async (req, res) => {
   res.send(html)
 })
 
-// Share image PNG generation endpoint - generates and caches in memory
+// Share image PNG generation endpoint - generates and saves to disk
 app.get('/api/share-image-png', async (req, res) => {
   const token = req.query.token as string || 'BATR'
   const leverage = req.query.leverage as string || '1'
@@ -1524,8 +1533,10 @@ app.get('/api/share-image-png', async (req, res) => {
 
   // Generate unique hash for this share
   const imageHash = generateImageHash(token, leverage, profit, profitPercent)
+  const filename = `${imageHash}.png`
+  const filepath = path.join(SHARES_DIR, filename)
 
-  console.log('🎨 Generating new share image:', imageHash)
+  console.log('🎨 Generating share image:', filename)
 
   // Create canvas
   const canvas = createCanvas(1200, 630)
@@ -1589,26 +1600,26 @@ app.get('/api/share-image-png', async (req, res) => {
   ctx.fillText(`+$${profit}`, 1000, 460)
   ctx.fillText(`+${profitPercent}%`, 1000, 520)
 
-  // Convert to buffer and cache in memory
+  // Convert to buffer and save to disk
   const buffer = canvas.toBuffer('image/png')
 
-  // Store in memory cache
-  imageCache.set(imageHash, {
-    buffer,
-    timestamp: Date.now()
-  })
-  console.log('💾 Cached share image in memory:', imageHash, `(${imageCache.size} images in cache)`)
+  try {
+    fs.writeFileSync(filepath, buffer)
+    console.log('💾 Saved share image to disk:', filename)
+  } catch (error) {
+    console.error('Failed to save share image:', error)
+  }
 
   // If format=json, return JSON with hash and URL
   if (format === 'json') {
-    const imageUrl = `https://basedtraders.onrender.com/share-images/${imageHash}.png`
+    const imageUrl = `https://basedtraders.onrender.com/shares/${filename}`
     return res.json({ hash: imageHash, url: imageUrl })
   }
 
   // Otherwise send the image directly
   res.setHeader('Content-Type', 'image/png')
   res.setHeader('Content-Length', buffer.length.toString())
-  res.setHeader('Cache-Control', 'public, max-age=300') // Cache for 5 minutes
+  res.setHeader('Cache-Control', 'public, max-age=300')
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.send(buffer)
 })
