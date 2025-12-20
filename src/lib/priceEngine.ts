@@ -1,16 +1,8 @@
-// Client-side Price Engine - Hybrid: Real-time prices for crypto via WebSocket, simulated for game tokens
+// Client-side Price Engine - Gets all prices from server WebSocket
 class PriceEngine {
   private tokenPrices: Map<string, number> = new Map() // symbol -> price
   private listeners: Map<string, Set<(price: number) => void>> = new Map() // symbol -> callbacks
-  private intervalId: number | null = null
-  private binanceWs: WebSocket | null = null
-  private volatility: number = 0.004
-  private trend: number = 0
-  private trendChangeCounter: number = 0
-
-  // Game tokens (simulated) - all others are real crypto from Binance WebSocket
-  private gameTokens = new Set(['BATR'])
-  private cryptoSymbols = ['btcusdt', 'ethusdt', 'solusdt']
+  private serverWs: WebSocket | null = null
 
   constructor() {
     // Initialize with default prices
@@ -19,146 +11,90 @@ class PriceEngine {
     this.tokenPrices.set('ETH', 3000)
     this.tokenPrices.set('SOL', 100)
 
-    // Fetch initial real prices
-    this.fetchInitialCryptoPrices()
+    // Fetch initial prices from API
+    this.fetchInitialPrices()
   }
 
   start() {
-    if (this.intervalId) return
+    if (this.serverWs) return
 
-    // Update game token prices every second
-    this.intervalId = window.setInterval(() => {
-      this.updateGameTokenPrices()
-    }, 1000)
-
-    // Connect to Binance WebSocket for real-time crypto prices
-    this.connectBinanceWebSocket()
+    // Connect to server WebSocket for ALL token prices (both real and game)
+    this.connectServerWebSocket()
   }
 
-  private async fetchInitialCryptoPrices() {
+  private async fetchInitialPrices() {
     try {
-      // Fetch initial prices from Binance REST API
-      const symbols = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT']
-      const promises = symbols.map(symbol =>
-        fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`)
-          .then(res => res.json())
-          .catch(() => null)
-      )
+      // Fetch all active tokens and their current prices
+      const response = await fetch('https://basedtraders.onrender.com/api/tokens')
+      const tokens = await response.json()
 
-      const results = await Promise.all(promises)
-
-      results.forEach((data: any) => {
-        if (data && data.symbol && data.price) {
-          const symbol = data.symbol.replace('USDT', '')
-          const price = parseFloat(data.price)
-          this.tokenPrices.set(symbol, price)
-          this.notifyListenersForToken(symbol)
-        }
+      tokens.forEach((token: any) => {
+        this.tokenPrices.set(token.symbol, token.current_price)
       })
+
+      // Notify all listeners with initial prices
+      tokens.forEach((token: any) => {
+        this.notifyListenersForToken(token.symbol)
+      })
+
+      console.log('✅ Loaded initial prices for', tokens.length, 'tokens')
     } catch (error) {
-      console.error('Failed to fetch initial crypto prices:', error)
+      console.error('Failed to fetch initial prices:', error)
     }
   }
 
-  private connectBinanceWebSocket() {
+  private connectServerWebSocket() {
     try {
-      // Binance WebSocket stream for multiple symbols
-      // Format: btcusdt@ticker/ethusdt@ticker/solusdt@ticker
-      const streams = this.cryptoSymbols.map(s => `${s}@ticker`).join('/')
-      const wsUrl = `wss://stream.binance.com:9443/stream?streams=${streams}`
+      // Connect to server WebSocket
+      const wsUrl = 'wss://basedtraders.onrender.com/ws'
 
-      this.binanceWs = new WebSocket(wsUrl)
+      this.serverWs = new WebSocket(wsUrl)
 
-      this.binanceWs.onmessage = (event) => {
+      this.serverWs.onopen = () => {
+        console.log('🔌 Connected to server WebSocket for price updates')
+      }
+
+      this.serverWs.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data)
 
-          if (data.data && data.data.s && data.data.c) {
-            // data.data.s = symbol (e.g., "BTCUSDT")
-            // data.data.c = current price
-            const symbol = data.data.s.replace('USDT', '')
-            const price = parseFloat(data.data.c)
-
-            if (price > 0) {
-              this.tokenPrices.set(symbol, price)
+          if (data.prices) {
+            // Update all token prices from server broadcast
+            Object.entries(data.prices).forEach(([symbol, price]) => {
+              this.tokenPrices.set(symbol, price as number)
               this.notifyListenersForToken(symbol)
-            }
+            })
           }
         } catch (error) {
           console.error('WebSocket message parse error:', error)
         }
       }
 
-      this.binanceWs.onerror = (error) => {
-        console.error('Binance WebSocket error:', error)
+      this.serverWs.onerror = (error) => {
+        console.error('Server WebSocket error:', error)
       }
 
-      this.binanceWs.onclose = () => {
-        console.log('Binance WebSocket closed, reconnecting in 5s...')
-        // Reconnect after 5 seconds
+      this.serverWs.onclose = () => {
+        console.log('⚠️ Server WebSocket closed, reconnecting in 3s...')
+        this.serverWs = null
+        // Reconnect after 3 seconds
         setTimeout(() => {
-          if (this.intervalId !== null) {
-            this.connectBinanceWebSocket()
-          }
-        }, 5000)
+          this.connectServerWebSocket()
+        }, 3000)
       }
     } catch (error) {
-      console.error('Failed to connect to Binance WebSocket:', error)
+      console.error('Failed to connect to server WebSocket:', error)
+      // Retry after 3 seconds
+      setTimeout(() => {
+        this.connectServerWebSocket()
+      }, 3000)
     }
-  }
-
-  private updateGameTokenPrices() {
-    // Update trend periodically
-    this.trendChangeCounter++
-    if (this.trendChangeCounter > 60 + Math.random() * 120) {
-      const randomTrend = (Math.random() - 0.5) * 0.0002
-      this.trend = randomTrend
-      this.trendChangeCounter = 0
-    }
-
-    // Only update game tokens (BATR, etc)
-    this.gameTokens.forEach(symbol => {
-      const price = this.tokenPrices.get(symbol) || 100
-      let newPrice = price
-
-      // Random price movements
-      if (Math.random() < 0.03) {
-        // Small movement (3% chance)
-        const amount = (price * 0.001) + Math.random() * (price * 0.003)
-        const direction = Math.random() > 0.5 ? 1 : -1
-        newPrice = price + (amount * direction)
-      } else if (Math.random() < 0.0008) {
-        // Crash (0.08% chance)
-        const dropPercent = 0.02 + Math.random() * 0.03
-        newPrice = price * (1 - dropPercent)
-      } else if (Math.random() < 0.0008) {
-        // Pump (0.08% chance)
-        const risePercent = 0.02 + Math.random() * 0.03
-        newPrice = price * (1 + risePercent)
-      } else {
-        // Normal volatility
-        const randomComponent = (Math.random() - 0.5) * 2 * this.volatility
-        const change = this.trend + randomComponent
-        newPrice = price * (1 + change)
-      }
-
-      // Ensure price doesn't go too low
-      newPrice = Math.max(1, newPrice)
-
-      // Update price
-      this.tokenPrices.set(symbol, newPrice)
-      this.notifyListenersForToken(symbol)
-    })
   }
 
   stop() {
-    if (this.intervalId) {
-      clearInterval(this.intervalId)
-      this.intervalId = null
-    }
-    if (this.binanceWs) {
-      this.binanceWs.close()
-      this.binanceWs = null
+    if (this.serverWs) {
+      this.serverWs.close()
+      this.serverWs = null
     }
   }
 
