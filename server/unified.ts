@@ -1425,9 +1425,12 @@ app.get('/api/share-image', async (req, res) => {
   <meta property="fc:frame:button:1:action" content="link" />
   <meta property="fc:frame:button:1:target" content="https://farcaster.xyz/miniapps/GlmJsUyW-yPo/based-traders" />
 
+  <meta property="og:image" content="${imageUrl}" />
   <meta property="og:url" content="https://farcaster.xyz/miniapps/GlmJsUyW-yPo/based-traders" />
   <meta property="og:title" content="Profitable Trade on Based Traders!" />
   <meta property="og:description" content="${leverage}x ${token} position closed with +$${profit} profit!" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="${imageUrl}" />
 </head>
 <body>
   <h1>Profitable Trade!</h1>
