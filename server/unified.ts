@@ -1514,12 +1514,17 @@ app.get('/api/share-image-png', async (req, res) => {
   ctx.fillText(`+$${profit}`, 1000, 460)
   ctx.fillText(`+${profitPercent}%`, 1000, 520)
 
+  // Convert canvas to buffer for proper Content-Length header
+  const buffer = canvas.toBuffer('image/png')
+
   // Set response headers
   res.setHeader('Content-Type', 'image/png')
+  res.setHeader('Content-Length', buffer.length.toString())
   res.setHeader('Cache-Control', 'public, max-age=3600')
+  res.setHeader('Access-Control-Allow-Origin', '*')
 
   // Send image
-  canvas.createPNGStream().pipe(res)
+  res.send(buffer)
 })
 
 // Serve static files in production
