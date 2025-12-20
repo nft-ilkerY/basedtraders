@@ -1,6 +1,6 @@
 // Real-time Crypto Price Fetcher using Binance WebSocket (Free, Real-time)
 import WebSocket from 'ws'
-import type Database from 'better-sqlite3'
+import { supabase } from './db.js'
 
 interface BinanceTickerData {
   s: string  // Symbol (e.g., "BTCUSDT")
@@ -13,38 +13,46 @@ class CryptoPriceFetcher {
   private ws: WebSocket | null = null
   private reconnectTimeout: NodeJS.Timeout | null = null
   private symbols: string[] = [] // Will be loaded from database
-  private db: Database.Database | null = null
 
   constructor() {
     // Prices will be initialized when loadSymbols is called
   }
 
-  // Initialize with database connection (called from server)
-  setDatabase(database: Database.Database) {
-    this.db = database
+  // Deprecated - no longer needed with Supabase
+  setDatabase(_database: any) {
+    console.log('⚠️  setDatabase() is deprecated - using Supabase directly')
   }
 
-  private loadSymbolsFromDB() {
-    if (!this.db) {
-      console.warn('⚠️  Database not initialized in CryptoPriceFetcher')
+  private async loadSymbolsFromDB() {
+    try {
+      const { data: tokens, error } = await supabase
+        .from('tokens')
+        .select('symbol')
+        .eq('is_real_crypto', true)
+        .eq('is_active', true)
+
+      if (error || !tokens || tokens.length === 0) {
+        console.warn('⚠️  No real crypto tokens found in database')
+        return []
+      }
+
+      this.symbols = tokens.map(t => `${t.symbol.toLowerCase()}usdt`)
+      tokens.forEach(t => {
+        if (!this.prices.has(t.symbol)) {
+          this.prices.set(t.symbol, 0)
+        }
+      })
+
+      return tokens.map(t => t.symbol)
+    } catch (error) {
+      console.error('Error loading tokens from database:', error)
       return []
     }
-
-    const tokens = this.db.prepare('SELECT symbol FROM tokens WHERE is_real_crypto = 1 AND is_active = 1').all() as Array<{ symbol: string }>
-
-    this.symbols = tokens.map(t => `${t.symbol.toLowerCase()}usdt`)
-    tokens.forEach(t => {
-      if (!this.prices.has(t.symbol)) {
-        this.prices.set(t.symbol, 0)
-      }
-    })
-
-    return tokens.map(t => t.symbol)
   }
 
   async start() {
     // Load symbols from database
-    const symbols = this.loadSymbolsFromDB()
+    const symbols = await this.loadSymbolsFromDB()
 
     if (symbols.length === 0) {
       console.log('⚠️  No real crypto tokens found in database')
