@@ -568,19 +568,16 @@ export default function Profile({ profile, isLoggedIn }: ProfileProps) {
                 <button
                   onClick={async () => {
                     try {
-                      // Generate parameters for PNG generation
+                      // Generate parameters for PNG URL
                       const params = new URLSearchParams({
                         token: shareModal.token,
                         leverage: shareModal.leverage.toString(),
                         profit: shareModal.profit.toFixed(2),
-                        profitPercent: shareModal.profitPercent.toFixed(2),
-                        format: 'json'
+                        profitPercent: shareModal.profitPercent.toFixed(2)
                       })
 
-                      // Get PNG URL from backend (saves to disk and returns static URL)
-                      const response = await fetch(`https://basedtraders.onrender.com/api/share-image-png?${params}`)
-                      const { url: imageUrl } = await response.json()
-
+                      // Use direct API endpoint URL (not saved to disk, served directly)
+                      const imageUrl = `https://basedtraders.onrender.com/api/share-image-png?${params}`
                       const miniappUrl = 'https://farcaster.xyz/miniapps/YgDPslIu3Xrt/basedtraders'
                       const castText = `🎯 Just closed a ${shareModal.leverage}x ${shareModal.token} position with +$${shareModal.profit.toFixed(2)} profit (+${shareModal.profitPercent.toFixed(1)}%) on @basedtraders! 💰\n\nThink you can do better?`
 

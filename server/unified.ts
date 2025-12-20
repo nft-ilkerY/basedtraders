@@ -1523,20 +1523,14 @@ app.get('/api/share-image', async (req, res) => {
   res.send(html)
 })
 
-// Share image PNG generation endpoint - generates and saves to disk
+// Share image PNG generation endpoint - generates and serves directly (no disk storage)
 app.get('/api/share-image-png', async (req, res) => {
   const token = req.query.token as string || 'BATR'
   const leverage = req.query.leverage as string || '1'
   const profit = req.query.profit as string || '0'
   const profitPercent = req.query.profitPercent as string || '0'
-  const format = req.query.format as string // 'json' or undefined (default: PNG)
 
-  // Generate unique hash for this share
-  const imageHash = generateImageHash(token, leverage, profit, profitPercent)
-  const filename = `${imageHash}.png`
-  const filepath = path.join(SHARES_DIR, filename)
-
-  console.log('🎨 Generating share image:', filename)
+  console.log('🎨 Generating share image for:', { token, leverage, profit, profitPercent })
 
   // Create canvas
   const canvas = createCanvas(1200, 630)
@@ -1600,23 +1594,12 @@ app.get('/api/share-image-png', async (req, res) => {
   ctx.fillText(`+$${profit}`, 1000, 460)
   ctx.fillText(`+${profitPercent}%`, 1000, 520)
 
-  // Convert to buffer and save to disk
+  // Convert to buffer and send directly (no disk storage)
   const buffer = canvas.toBuffer('image/png')
 
-  try {
-    fs.writeFileSync(filepath, buffer)
-    console.log('💾 Saved share image to disk:', filename)
-  } catch (error) {
-    console.error('Failed to save share image:', error)
-  }
+  console.log('✅ Generated share image, sending directly')
 
-  // If format=json, return JSON with hash and URL
-  if (format === 'json') {
-    const imageUrl = `https://basedtraders.onrender.com/shares/${filename}`
-    return res.json({ hash: imageHash, url: imageUrl })
-  }
-
-  // Otherwise send the image directly
+  // Send the image directly
   res.setHeader('Content-Type', 'image/png')
   res.setHeader('Content-Length', buffer.length.toString())
   res.setHeader('Cache-Control', 'public, max-age=300')
