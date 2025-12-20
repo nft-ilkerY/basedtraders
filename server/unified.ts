@@ -1421,16 +1421,23 @@ app.get('/api/share-image', async (req, res) => {
 <head>
   <meta property="fc:frame" content="vNext" />
   <meta property="fc:frame:image" content="${imageUrl}" />
+  <meta property="fc:frame:image:aspect_ratio" content="1.91:1" />
   <meta property="fc:frame:button:1" content="Open" />
   <meta property="fc:frame:button:1:action" content="link" />
   <meta property="fc:frame:button:1:target" content="https://farcaster.xyz/miniapps/GlmJsUyW-yPo/based-traders" />
 
   <meta property="og:image" content="${imageUrl}" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:type" content="image/png" />
   <meta property="og:url" content="https://farcaster.xyz/miniapps/GlmJsUyW-yPo/based-traders" />
   <meta property="og:title" content="Profitable Trade on Based Traders!" />
   <meta property="og:description" content="${leverage}x ${token} position closed with +$${profit} profit!" />
+  <meta property="og:type" content="website" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:image" content="${imageUrl}" />
+  <meta name="twitter:title" content="Profitable Trade on Based Traders!" />
+  <meta name="twitter:description" content="${leverage}x ${token} position closed with +$${profit} profit!" />
 </head>
 <body>
   <h1>Profitable Trade!</h1>
