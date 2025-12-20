@@ -1517,18 +1517,19 @@ app.get('/api/share-image-png', async (req, res) => {
   const imageHash = generateImageHash(token, leverage, profit, profitPercent)
   const imagePath = path.join(SHARE_IMAGES_DIR, `${imageHash}.png`)
 
-  // If format=json, return JSON with hash and URL
-  if (format === 'json') {
-    const imageUrl = `https://basedtraders.onrender.com/share-images/${imageHash}.png`
-    return res.json({ hash: imageHash, url: imageUrl })
-  }
-
   // Check if image already exists
   if (fs.existsSync(imagePath)) {
-    console.log('✅ Serving existing share image:', imageHash)
+    console.log('✅ Image already exists:', imageHash)
     // Update file modification time to keep it alive
     fs.utimesSync(imagePath, new Date(), new Date())
 
+    // If format=json, return JSON with hash and URL
+    if (format === 'json') {
+      const imageUrl = `https://basedtraders.onrender.com/share-images/${imageHash}.png`
+      return res.json({ hash: imageHash, url: imageUrl })
+    }
+
+    // Otherwise serve the image
     res.setHeader('Content-Type', 'image/png')
     res.setHeader('Cache-Control', 'public, max-age=86400') // Cache for 24 hours
     res.setHeader('Access-Control-Allow-Origin', '*')
@@ -1609,7 +1610,13 @@ app.get('/api/share-image-png', async (req, res) => {
     console.error('❌ Error saving share image:', error)
   }
 
-  // Send image
+  // If format=json, return JSON with hash and URL
+  if (format === 'json') {
+    const imageUrl = `https://basedtraders.onrender.com/share-images/${imageHash}.png`
+    return res.json({ hash: imageHash, url: imageUrl })
+  }
+
+  // Otherwise send the image
   res.setHeader('Content-Type', 'image/png')
   res.setHeader('Content-Length', buffer.length.toString())
   res.setHeader('Cache-Control', 'public, max-age=86400') // Cache for 24 hours
