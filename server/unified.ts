@@ -26,11 +26,32 @@ const app = express()
 const server = createServer(app)
 const wss = new WebSocketServer({ server, path: '/ws' })
 
-// CORS - only for development
+// CORS - allow requests from Vercel frontend and Farcaster
 const isDev = process.env.NODE_ENV !== 'production'
-if (isDev) {
-  app.use(cors())
-}
+const allowedOrigins = [
+  'https://basetraders.vercel.app',
+  'https://warpcast.com',
+  'http://localhost:5173', // Local development
+  'http://localhost:3000'  // Local development
+]
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true)
+
+    // Allow all origins in development
+    if (isDev) return callback(null, true)
+
+    // In production, check against allowed origins
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true)
+    } else {
+      callback(new Error('Not allowed by CORS'))
+    }
+  },
+  credentials: true
+}))
 
 // IMPORTANT: Serve local .well-known/farcaster.json BEFORE any other middleware
 app.get('/.well-known/farcaster.json', (req, res) => {
