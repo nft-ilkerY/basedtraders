@@ -585,7 +585,7 @@ export default function Profile({ profile, isLoggedIn }: ProfileProps) {
 
                       await sdk.actions.composeCast({
                         text: castText,
-                        embeds: [imageUrl]
+                        embeds: [imageUrl, 'https://farcaster.xyz/miniapps/YgDPslIu3Xrt/basedtraders']
                       })
                       setShareModal(null)
                     } catch (error) {
