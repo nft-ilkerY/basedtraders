@@ -1571,10 +1571,15 @@ wss.on('connection', async (ws) => {
   }
 })
 
-const PORT = process.env.PORT || 3000
+// Only start server if not in Vercel environment
+if (process.env.VERCEL !== '1') {
+  const PORT = process.env.PORT || 3000
+  server.listen(PORT, () => {
+    console.log(`🚀 Server running on http://localhost:${PORT}`)
+    console.log(`📡 WebSocket running on ws://localhost:${PORT}`)
+    console.log(`🌍 Mode: ${isDev ? 'Development' : 'Production'}`)
+  })
+}
 
-server.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`)
-  console.log(`📡 WebSocket running on ws://localhost:${PORT}`)
-  console.log(`🌍 Mode: ${isDev ? 'Development' : 'Production'}`)
-})
+// Export the Express app for Vercel
+export default app
