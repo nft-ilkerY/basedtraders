@@ -568,7 +568,7 @@ export default function Profile({ profile, isLoggedIn }: ProfileProps) {
                 <button
                   onClick={async () => {
                     try {
-                      // Generate parameters for API call
+                      // Generate Frame URL with trade parameters
                       const params = new URLSearchParams({
                         token: shareModal.token,
                         leverage: shareModal.leverage.toString(),
@@ -576,18 +576,12 @@ export default function Profile({ profile, isLoggedIn }: ProfileProps) {
                         profitPercent: shareModal.profitPercent.toFixed(2)
                       })
 
-                      // Get image as blob from backend
-                      const imageResponse = await fetch(`https://basedtraders.onrender.com/api/share-image-png?${params}`)
-                      const imageBlob = await imageResponse.blob()
-
-                      // Create File object from blob with proper filename
-                      const imageFile = new File([imageBlob], 'trade-share.png', { type: 'image/png' })
-
+                      const frameUrl = `https://basedtraders.onrender.com/api/share-image?${params}`
                       const castText = `🎯 Just closed a ${shareModal.leverage}x ${shareModal.token} position with +$${shareModal.profit.toFixed(2)} profit (+${shareModal.profitPercent.toFixed(1)}%) on @basedtraders! 💰\n\nThink you can do better?`
 
                       await sdk.actions.composeCast({
                         text: castText,
-                        embeds: [imageFile, 'https://farcaster.xyz/miniapps/YgDPslIu3Xrt/basedtraders']
+                        embeds: [frameUrl]
                       })
                       setShareModal(null)
                     } catch (error) {
