@@ -568,7 +568,7 @@ export default function Profile({ profile, isLoggedIn }: ProfileProps) {
                 <button
                   onClick={async () => {
                     try {
-                      // First, trigger image generation and get it saved
+                      // Generate parameters
                       const params = new URLSearchParams({
                         token: shareModal.token,
                         leverage: shareModal.leverage.toString(),
@@ -576,17 +576,17 @@ export default function Profile({ profile, isLoggedIn }: ProfileProps) {
                         profitPercent: shareModal.profitPercent.toFixed(2)
                       })
 
-                      // Call the endpoint to ensure image is generated and cached
+                      // Pre-generate and cache the image on backend
                       await fetch(`https://basedtraders.onrender.com/api/share-image-png?${params}`)
 
-                      // Use Frame HTML URL for better Warpcast compatibility
-                      const frameUrl = `https://basedtraders.onrender.com/api/share-image?${params}`
+                      // Use direct PNG URL in cast
+                      const imageUrl = `https://basedtraders.onrender.com/api/share-image-png?${params}`
 
                       const castText = `🎯 Just closed a ${shareModal.leverage}x ${shareModal.token} position with +$${shareModal.profit.toFixed(2)} profit (+${shareModal.profitPercent.toFixed(1)}%) on @basedtraders! 💰\n\nThink you can do better?`
 
                       await sdk.actions.composeCast({
                         text: castText,
-                        embeds: [frameUrl]
+                        embeds: [imageUrl]
                       })
                       setShareModal(null)
                     } catch (error) {
