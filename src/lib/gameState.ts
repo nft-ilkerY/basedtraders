@@ -274,7 +274,12 @@ export class GameState {
           collateral: position.collateral,
         }),
       })
-      console.log('📡 [GameState] Position save response:', posResponse.status, posResponse.ok)
+      const posResult = await posResponse.json()
+      console.log('📡 [GameState] Position save response:', posResponse.status, posResponse.ok, posResult)
+
+      if (!posResponse.ok) {
+        console.error('❌ [GameState] Position save failed:', posResult)
+      }
 
       // Update player cash in database
       console.log('💾 [GameState] Updating player cash to:', state.cash)

@@ -536,17 +536,25 @@ app.post('/api/position/open', async (req, res) => {
 
     console.log('💾 [API] Inserting position into Supabase:', positionData)
 
-    const { error: insertError } = await supabase
+    const { data: insertedData, error: insertError } = await supabase
       .from('positions')
       .insert(positionData)
+      .select()
 
     if (insertError) {
       console.error('❌ [API] Error inserting position:', insertError)
-      throw insertError
+      console.error('❌ [API] Insert error details:', JSON.stringify(insertError, null, 2))
+      console.error('❌ [API] Position data that failed:', JSON.stringify(positionData, null, 2))
+      return res.status(500).json({
+        success: false,
+        error: insertError.message,
+        details: insertError,
+        data: positionData
+      })
     }
 
-    console.log('✅ [API] Position saved successfully to Supabase!')
-    res.json({ success: true })
+    console.log('✅ [API] Position saved successfully to Supabase!', insertedData)
+    res.json({ success: true, data: insertedData })
   } catch (error: any) {
     console.error('❌ [API] Fatal error in position/open:', error)
     res.status(500).json({ error: error.message })
