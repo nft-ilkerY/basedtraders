@@ -1465,39 +1465,46 @@ app.get('/api/share-image', async (req, res) => {
   const profitPercent = req.query.profitPercent as string || '0'
 
   const imageUrl = `https://basedtraders.onrender.com/api/share-image-png?token=${encodeURIComponent(token)}&leverage=${leverage}&profit=${profit}&profitPercent=${profitPercent}`
+  const miniappUrl = 'https://farcaster.xyz/miniapps/YgDPslIu3Xrt/basedtraders'
 
-  const html = `
-<!DOCTYPE html>
+  const html = `<!DOCTYPE html>
 <html>
 <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Profitable Trade on Based Traders!</title>
+
+  <!-- Farcaster Frame -->
   <meta property="fc:frame" content="vNext" />
   <meta property="fc:frame:image" content="${imageUrl}" />
   <meta property="fc:frame:image:aspect_ratio" content="1.91:1" />
-  <meta property="fc:frame:button:1" content="Open" />
+  <meta property="fc:frame:button:1" content="Play Now" />
   <meta property="fc:frame:button:1:action" content="link" />
-  <meta property="fc:frame:button:1:target" content="https://farcaster.xyz/miniapps/GlmJsUyW-yPo/based-traders" />
+  <meta property="fc:frame:button:1:target" content="${miniappUrl}" />
 
+  <!-- Open Graph -->
+  <meta property="og:title" content="Profitable Trade on Based Traders!" />
+  <meta property="og:description" content="${leverage}x ${token} position closed with +$${profit} profit (+${profitPercent}%)" />
   <meta property="og:image" content="${imageUrl}" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
-  <meta property="og:image:type" content="image/png" />
-  <meta property="og:url" content="https://farcaster.xyz/miniapps/GlmJsUyW-yPo/based-traders" />
-  <meta property="og:title" content="Profitable Trade on Based Traders!" />
-  <meta property="og:description" content="${leverage}x ${token} position closed with +$${profit} profit!" />
-  <meta property="og:type" content="website" />
+  <meta property="og:url" content="${miniappUrl}" />
+
+  <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:image" content="${imageUrl}" />
   <meta name="twitter:title" content="Profitable Trade on Based Traders!" />
   <meta name="twitter:description" content="${leverage}x ${token} position closed with +$${profit} profit!" />
+  <meta name="twitter:image" content="${imageUrl}" />
 </head>
-<body>
-  <h1>Profitable Trade!</h1>
+<body style="margin: 0; padding: 20px; font-family: Arial, sans-serif; background: #0f1117; color: white;">
+  <h1>🎯 Profitable Trade!</h1>
   <p>${leverage}x ${token} position closed with +$${profit} profit (+${profitPercent}%)</p>
+  <a href="${miniappUrl}" style="color: #0000FF;">Play Now on Based Traders</a>
 </body>
-</html>
-  `
+</html>`
 
-  res.setHeader('Content-Type', 'text/html')
+  res.setHeader('Content-Type', 'text/html; charset=utf-8')
+  res.setHeader('Cache-Control', 'public, max-age=300')
   res.send(html)
 })
 

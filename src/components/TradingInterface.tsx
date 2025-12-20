@@ -621,7 +621,7 @@ export default function TradingInterface({ profile, isLoggedIn }: TradingInterfa
                 <button
                   onClick={async () => {
                     try {
-                      // Generate parameters for API call
+                      // Generate parameters for Frame URL
                       const params = new URLSearchParams({
                         token: shareModal.token,
                         leverage: shareModal.leverage.toString(),
@@ -629,14 +629,13 @@ export default function TradingInterface({ profile, isLoggedIn }: TradingInterfa
                         profitPercent: shareModal.profitPercent.toFixed(2)
                       })
 
-                      // Use direct PNG URL instead of Frame HTML
-                      const imageUrl = `https://basedtraders.onrender.com/api/share-image-png?${params}`
-                      const miniappUrl = 'https://farcaster.xyz/miniapps/YgDPslIu3Xrt/basedtraders'
+                      // Use Frame HTML URL (Farcaster will fetch and display the image from frame meta tags)
+                      const frameUrl = `https://basedtraders.onrender.com/api/share-image?${params}`
                       const castText = `🎯 Just closed a ${shareModal.leverage}x ${shareModal.token} position with +$${shareModal.profit.toFixed(2)} profit (+${shareModal.profitPercent.toFixed(1)}%) on @basedtraders! 💰\n\nThink you can do better?`
 
                       await sdk.actions.composeCast({
                         text: castText,
-                        embeds: [imageUrl, miniappUrl]
+                        embeds: [frameUrl]
                       })
                       setShareModal(null)
                     } catch (error) {
