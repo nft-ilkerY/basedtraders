@@ -47,10 +47,10 @@ export default function AdminPanel({ fid }: AdminPanelProps) {
   const loadData = async () => {
     try {
       const [tokensRes, configsRes] = await Promise.all([
-        fetch('/api/admin/tokens', {
+        fetch('https://basedtraders.onrender.com/api/admin/tokens', {
           headers: { 'x-fid': fid.toString() }
         }),
-        fetch('/api/admin/config', {
+        fetch('https://basedtraders.onrender.com/api/admin/config', {
           headers: { 'x-fid': fid.toString() }
         })
       ])
@@ -78,7 +78,7 @@ export default function AdminPanel({ fid }: AdminPanelProps) {
     try {
       const actualPrice = parseFloat(newToken.initial_price)
 
-      const response = await fetch('/api/admin/tokens', {
+      const response = await fetch('https://basedtraders.onrender.com/api/admin/tokens', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -105,7 +105,7 @@ export default function AdminPanel({ fid }: AdminPanelProps) {
 
   const handleToggleToken = async (token: Token) => {
     try {
-      const response = await fetch(`/api/admin/tokens/${token.id}`, {
+      const response = await fetch(`https://basedtraders.onrender.com/api/admin/tokens/${token.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -183,7 +183,7 @@ export default function AdminPanel({ fid }: AdminPanelProps) {
 
   const handleUpdateConfig = async (key: string, value: string) => {
     try {
-      const response = await fetch(`/api/admin/config/${key}`, {
+      const response = await fetch(`https://basedtraders.onrender.com/api/admin/config/${key}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -208,7 +208,7 @@ export default function AdminPanel({ fid }: AdminPanelProps) {
 
     try {
       const threshold = parseFloat(balanceThreshold)
-      const response = await fetch(`/api/admin/players/count?threshold=${threshold}`, {
+      const response = await fetch(`https://basedtraders.onrender.com/api/admin/players/count?threshold=${threshold}`, {
         headers: { 'x-fid': fid.toString() }
       })
 
@@ -241,7 +241,7 @@ export default function AdminPanel({ fid }: AdminPanelProps) {
 
     setIsApplying(true)
     try {
-      const response = await fetch('/api/admin/players/bulk-balance', {
+      const response = await fetch('https://basedtraders.onrender.com/api/admin/players/bulk-balance', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

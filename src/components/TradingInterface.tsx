@@ -45,7 +45,7 @@ export default function TradingInterface({ profile, isLoggedIn }: TradingInterfa
   useEffect(() => {
     const loadTokens = async () => {
       try {
-        const response = await fetch('/api/tokens')
+        const response = await fetch('https://basedtraders.onrender.com/api/tokens')
         const data = await response.json()
         setTokens(data)
         if (data.length > 0) {
@@ -115,7 +115,7 @@ export default function TradingInterface({ profile, isLoggedIn }: TradingInterfa
       console.log('🔄 [TradingInterface] Player login detected, FID:', profile.fid)
       setPlayerLoading(true)
 
-      fetch('/api/player/create', {
+      fetch('https://basedtraders.onrender.com/api/player/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

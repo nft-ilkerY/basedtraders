@@ -27,7 +27,7 @@ export interface PlayerState {
 const INITIAL_CASH = 250
 const BASE_TRADING_FEE = 0.002 // 0.2% base fee
 const PROFIT_FEE = 0.05 // 5% fee on profit only
-const API_BASE = '/api'
+const API_BASE = 'https://basedtraders.onrender.com/api'
 const MAX_POSITION_SIZE_PERCENT = 0.80 // 80% max of total portfolio
 const FUNDING_RATE_PER_HOUR = 0.0005 // 0.05% per hour
 const FUNDING_UPDATE_INTERVAL = 3600000 // 1 hour in milliseconds
