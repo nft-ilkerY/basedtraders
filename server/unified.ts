@@ -254,12 +254,23 @@ class GlobalPriceEngine {
     for (const token of tokens) {
       let price = this.tokenPrices.get(token.id) || token.current_price
 
-      // For real crypto tokens, use real prices from Binance
-      if (token.is_real_crypto === 1) {
+      // For real crypto tokens, use real prices from Binance (SKIP simulation!)
+      if (token.is_real_crypto === 1 || token.is_real_crypto === true) {
         const realPrice = cryptoPriceFetcher.getPrice(token.symbol)
         if (realPrice > 0) {
-          price = realPrice
+          // Only update if price changed (avoid unnecessary DB writes)
+          const oldPrice = this.tokenPrices.get(token.id)
+          if (oldPrice !== realPrice) {
+            price = realPrice
+          } else {
+            // Price hasn't changed, skip this token
+            continue
+          }
+        } else {
+          // Binance price not available yet, skip this update cycle
+          continue
         }
+        // IMPORTANT: DO NOT run game simulation for real crypto!
       } else {
         // For game tokens (like BATR), use simulated price movements
         // Update trend periodically
