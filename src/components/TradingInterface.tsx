@@ -623,12 +623,12 @@ export default function TradingInterface({ profile, isLoggedIn }: TradingInterfa
                     try {
                       const castText = `🎯 Just closed a ${shareModal.leverage}x ${shareModal.token} position with +$${shareModal.profit.toFixed(2)} profit (+${shareModal.profitPercent.toFixed(1)}%) on @basedtraders! 💰\n\nThink you can do better?\n\nhttps://farcaster.xyz/miniapps/GlmJsUyW-yPo/based-traders`
 
-                      // Generate Frame HTML URL (not direct PNG) for Warpcast embed
-                      const frameUrl = `https://basedtraders.onrender.com/api/share-image?token=${encodeURIComponent(shareModal.token)}&leverage=${shareModal.leverage}&profit=${shareModal.profit.toFixed(2)}&profitPercent=${shareModal.profitPercent.toFixed(2)}`
+                      // Generate direct PNG URL for Warpcast embed
+                      const imageUrl = `https://basedtraders.onrender.com/api/share-image-png?token=${encodeURIComponent(shareModal.token)}&leverage=${shareModal.leverage}&profit=${shareModal.profit.toFixed(2)}&profitPercent=${shareModal.profitPercent.toFixed(2)}`
 
                       await sdk.actions.composeCast({
                         text: castText,
-                        embeds: [frameUrl]
+                        embeds: [imageUrl]
                       })
                       setShareModal(null)
                     } catch (error) {
