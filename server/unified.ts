@@ -250,7 +250,8 @@ class GlobalPriceEngine {
       return
     }
 
-    tokens.forEach(async (token) => {
+    // Use for...of instead of forEach to properly handle async/await
+    for (const token of tokens) {
       let price = this.tokenPrices.get(token.id) || token.current_price
 
       // For real crypto tokens, use real prices from Binance
@@ -292,18 +293,23 @@ class GlobalPriceEngine {
         price = Math.max(1, price)
       }
 
-      // Update token price in memory and database
+      // Update token price in memory first
       this.tokenPrices.set(token.id, price)
 
-      await supabase
+      // Update database (no await - fire and forget for performance)
+      supabase
         .from('tokens')
         .update({ current_price: price })
         .eq('id', token.id)
+        .then(() => {})
+        .catch((err) => console.error('Error updating token price:', err))
 
-      // Save to price history
-      await this.savePriceForToken(token.id, price)
-    })
+      // Save to price history (no await - fire and forget for performance)
+      this.savePriceForToken(token.id, price)
+        .catch((err) => console.error('Error saving price history:', err))
+    }
 
+    // Broadcast prices from memory (not database) for immediate sync
     this.broadcastPrice()
   }
 
@@ -346,17 +352,21 @@ class GlobalPriceEngine {
   }
 
   private async broadcastPrice() {
-    // Broadcast all token prices as { prices: { BATR: 100, BTC: 50000, ... } }
+    // Broadcast all token prices from memory (faster and more up-to-date than database)
     const { data: tokens, error } = await supabase
       .from('tokens')
-      .select('id, symbol, current_price')
+      .select('id, symbol')
       .eq('is_active', 1)
 
     if (error || !tokens) return
 
     const prices: Record<string, number> = {}
     tokens.forEach(t => {
-      prices[t.symbol] = t.current_price
+      // Get price from memory (tokenPrices Map) - this is already updated with real-time data
+      const price = this.tokenPrices.get(t.id)
+      if (price !== undefined) {
+        prices[t.symbol] = price
+      }
     })
 
     wss.clients.forEach(client => {
