@@ -11,6 +11,7 @@ import { cryptoPriceFetcher } from './cryptoPrice.js'
 // import { mintAchievementNFT } from './nftMinter.js' // DISABLED - Achievements coming soon
 import dotenv from 'dotenv'
 import { createCanvas, loadImage } from 'canvas'
+import crypto from 'crypto'
 
 // Load environment variables
 dotenv.config()
@@ -21,6 +22,53 @@ const __dirname = path.dirname(__filename)
 // Load admin FIDs from environment variable
 const ADMIN_FIDS = process.env.ADMIN_FIDS?.split(',').map(fid => parseInt(fid.trim())).filter(fid => !isNaN(fid)) || []
 console.log('🔐 Admin FIDs loaded:', ADMIN_FIDS)
+
+// Share image storage configuration
+const SHARE_IMAGES_DIR = path.join(__dirname, '..', 'public', 'share-images')
+const IMAGE_MAX_AGE_MS = 24 * 60 * 60 * 1000 // 24 hours
+
+// Ensure share-images directory exists
+if (!fs.existsSync(SHARE_IMAGES_DIR)) {
+  fs.mkdirSync(SHARE_IMAGES_DIR, { recursive: true })
+  console.log('📁 Created share-images directory:', SHARE_IMAGES_DIR)
+}
+
+// Generate hash for image filename based on trade parameters
+function generateImageHash(token: string, leverage: string, profit: string, profitPercent: string): string {
+  const data = `${token}-${leverage}-${profit}-${profitPercent}`
+  return crypto.createHash('md5').update(data).digest('hex')
+}
+
+// Clean up old images (older than IMAGE_MAX_AGE_MS)
+function cleanupOldImages() {
+  try {
+    const files = fs.readdirSync(SHARE_IMAGES_DIR)
+    const now = Date.now()
+    let deletedCount = 0
+
+    files.forEach(file => {
+      const filePath = path.join(SHARE_IMAGES_DIR, file)
+      const stats = fs.statSync(filePath)
+      const fileAge = now - stats.mtimeMs
+
+      if (fileAge > IMAGE_MAX_AGE_MS) {
+        fs.unlinkSync(filePath)
+        deletedCount++
+      }
+    })
+
+    if (deletedCount > 0) {
+      console.log(`🧹 Cleaned up ${deletedCount} old share images`)
+    }
+  } catch (error) {
+    console.error('❌ Error cleaning up old images:', error)
+  }
+}
+
+// Run cleanup every hour
+setInterval(cleanupOldImages, 60 * 60 * 1000)
+// Run initial cleanup on startup
+cleanupOldImages()
 
 const app = express()
 const server = createServer(app)
@@ -118,6 +166,13 @@ app.get('/.well-known/farcaster.json', (req, res) => {
 })
 
 app.use(express.json())
+
+// Serve share images statically with long cache
+app.use('/share-images', express.static(SHARE_IMAGES_DIR, {
+  maxAge: '24h',
+  etag: true,
+  lastModified: true
+}))
 
 // Serve Farcaster Manifest with no-cache headers
 app.get('/farcaster.json', (req, res) => {
@@ -1450,18 +1505,36 @@ app.get('/api/share-image', async (req, res) => {
   res.send(html)
 })
 
-// Share image PNG generation endpoint
+// Share image PNG generation endpoint - saves to disk for reliable access
 app.get('/api/share-image-png', async (req, res) => {
   const token = req.query.token as string || 'BATR'
   const leverage = req.query.leverage as string || '1'
   const profit = req.query.profit as string || '0'
   const profitPercent = req.query.profitPercent as string || '0'
 
+  // Generate hash-based filename
+  const imageHash = generateImageHash(token, leverage, profit, profitPercent)
+  const imagePath = path.join(SHARE_IMAGES_DIR, `${imageHash}.png`)
+
+  // Check if image already exists
+  if (fs.existsSync(imagePath)) {
+    console.log('✅ Serving existing share image:', imageHash)
+    // Update file modification time to keep it alive
+    fs.utimesSync(imagePath, new Date(), new Date())
+
+    res.setHeader('Content-Type', 'image/png')
+    res.setHeader('Cache-Control', 'public, max-age=86400') // Cache for 24 hours
+    res.setHeader('Access-Control-Allow-Origin', '*')
+    return res.sendFile(imagePath)
+  }
+
+  console.log('🎨 Generating new share image:', imageHash)
+
   // Create canvas
   const canvas = createCanvas(1200, 630)
   const ctx = canvas.getContext('2d')
 
-  // Background gradient (approximation with solid colors since canvas doesn't support CSS gradients the same way)
+  // Background
   ctx.fillStyle = '#0f1117'
   ctx.fillRect(0, 0, 1200, 630)
 
@@ -1480,7 +1553,6 @@ app.get('/api/share-image-png', async (req, res) => {
   try {
     const logoPath = path.join(__dirname, '..', 'public', 'menulogo.png')
     const logo = await loadImage(logoPath)
-    // Draw logo centered at top (150x150 size)
     ctx.drawImage(logo, 525, 30, 150, 150)
   } catch (error) {
     console.error('Failed to load menulogo.png:', error)
@@ -1492,7 +1564,7 @@ app.get('/api/share-image-png', async (req, res) => {
   ctx.textAlign = 'center'
   ctx.fillText('Profitable Trade!', 600, 240)
 
-  // Stats background rounded rectangle
+  // Stats background
   ctx.fillStyle = 'rgba(10, 12, 18, 0.7)'
   ctx.beginPath()
   ctx.roundRect(150, 280, 900, 280, 20)
@@ -1502,7 +1574,6 @@ app.get('/api/share-image-png', async (req, res) => {
   ctx.fillStyle = '#9ca3af'
   ctx.font = '32px Arial'
   ctx.textAlign = 'left'
-
   ctx.fillText('Token:', 200, 340)
   ctx.fillText('Leverage:', 200, 400)
   ctx.fillText('Profit:', 200, 460)
@@ -1521,16 +1592,21 @@ app.get('/api/share-image-png', async (req, res) => {
   ctx.fillText(`+$${profit}`, 1000, 460)
   ctx.fillText(`+${profitPercent}%`, 1000, 520)
 
-  // Convert canvas to buffer for proper Content-Length header
+  // Convert to buffer and save to disk
   const buffer = canvas.toBuffer('image/png')
 
-  // Set response headers
-  res.setHeader('Content-Type', 'image/png')
-  res.setHeader('Content-Length', buffer.length.toString())
-  res.setHeader('Cache-Control', 'public, max-age=3600')
-  res.setHeader('Access-Control-Allow-Origin', '*')
+  try {
+    fs.writeFileSync(imagePath, buffer)
+    console.log('💾 Saved share image to disk:', imagePath)
+  } catch (error) {
+    console.error('❌ Error saving share image:', error)
+  }
 
   // Send image
+  res.setHeader('Content-Type', 'image/png')
+  res.setHeader('Content-Length', buffer.length.toString())
+  res.setHeader('Cache-Control', 'public, max-age=86400') // Cache for 24 hours
+  res.setHeader('Access-Control-Allow-Origin', '*')
   res.send(buffer)
 })
 
