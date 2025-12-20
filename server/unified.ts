@@ -1511,10 +1511,17 @@ app.get('/api/share-image-png', async (req, res) => {
   const leverage = req.query.leverage as string || '1'
   const profit = req.query.profit as string || '0'
   const profitPercent = req.query.profitPercent as string || '0'
+  const format = req.query.format as string // 'json' or undefined (default: PNG)
 
   // Generate hash-based filename
   const imageHash = generateImageHash(token, leverage, profit, profitPercent)
   const imagePath = path.join(SHARE_IMAGES_DIR, `${imageHash}.png`)
+
+  // If format=json, return JSON with hash and URL
+  if (format === 'json') {
+    const imageUrl = `https://basedtraders.onrender.com/share-images/${imageHash}.png`
+    return res.json({ hash: imageHash, url: imageUrl })
+  }
 
   // Check if image already exists
   if (fs.existsSync(imagePath)) {

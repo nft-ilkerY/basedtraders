@@ -621,19 +621,18 @@ export default function TradingInterface({ profile, isLoggedIn }: TradingInterfa
                 <button
                   onClick={async () => {
                     try {
-                      // Generate parameters
+                      // Generate parameters for API call
                       const params = new URLSearchParams({
                         token: shareModal.token,
                         leverage: shareModal.leverage.toString(),
                         profit: shareModal.profit.toFixed(2),
-                        profitPercent: shareModal.profitPercent.toFixed(2)
+                        profitPercent: shareModal.profitPercent.toFixed(2),
+                        format: 'json'
                       })
 
-                      // Pre-generate and cache the image on backend
-                      await fetch(`https://basedtraders.onrender.com/api/share-image-png?${params}`)
-
-                      // Use direct PNG URL in cast
-                      const imageUrl = `https://basedtraders.onrender.com/api/share-image-png?${params}`
+                      // Get image URL from backend (generates image and returns hash/URL)
+                      const response = await fetch(`https://basedtraders.onrender.com/api/share-image-png?${params}`)
+                      const { url: imageUrl } = await response.json()
 
                       const castText = `🎯 Just closed a ${shareModal.leverage}x ${shareModal.token} position with +$${shareModal.profit.toFixed(2)} profit (+${shareModal.profitPercent.toFixed(1)}%) on @basedtraders! 💰\n\nThink you can do better?`
 
