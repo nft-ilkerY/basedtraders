@@ -1035,6 +1035,8 @@ app.get('/api/admin/tokens', isAdmin, async (req, res) => {
 app.post('/api/admin/tokens', isAdmin, async (req, res) => {
   const { symbol, name, initial_price, is_real_crypto } = req.body
 
+  console.log('🪙 [ADMIN] Add token request:', { symbol, name, initial_price, is_real_crypto })
+
   try {
     let logoUrl = null
 
@@ -1074,22 +1076,31 @@ app.post('/api/admin/tokens', isAdmin, async (req, res) => {
     }
 
     // Insert token with logo URL
+    const tokenData = {
+      symbol,
+      name,
+      initial_price: initial_price || 0,
+      current_price: initial_price || 0,
+      is_active: 1,
+      is_real_crypto: is_real_crypto ? 1 : 0,
+      logo_url: logoUrl,
+      created_at: Date.now()
+    }
+
+    console.log('💾 [ADMIN] Inserting token into database:', tokenData)
+
     const { data: newToken, error: insertError } = await supabase
       .from('tokens')
-      .insert({
-        symbol,
-        name,
-        initial_price: initial_price || 0,
-        current_price: initial_price || 0,
-        is_active: 1,
-        is_real_crypto: is_real_crypto ? 1 : 0,
-        logo_url: logoUrl,
-        created_at: Date.now()
-      })
+      .insert(tokenData)
       .select()
       .single()
 
-    if (insertError) throw insertError
+    if (insertError) {
+      console.error('❌ [ADMIN] Token insert error:', insertError)
+      throw insertError
+    }
+
+    console.log('✅ [ADMIN] Token inserted successfully, ID:', newToken.id)
 
     const tokenId = newToken.id
 
@@ -1105,24 +1116,35 @@ app.post('/api/admin/tokens', isAdmin, async (req, res) => {
       })
     }
 
+    console.log(`📊 [ADMIN] Creating ${priceHistoryRecords.length} price history records...`)
+
     // Bulk insert price history
     const { error: historyError } = await supabase
       .from('price_history')
       .insert(priceHistoryRecords)
 
-    if (historyError) throw historyError
+    if (historyError) {
+      console.error('❌ [ADMIN] Price history insert error:', historyError)
+      throw historyError
+    }
+
+    console.log('✅ [ADMIN] Price history created successfully')
 
     // Reload price engine to include new token
     await priceEngine.reloadTokens()
+    console.log('✅ [ADMIN] Price engine reloaded')
 
     // If it's a real crypto token, reload Binance WebSocket
     if (is_real_crypto) {
       cryptoPriceFetcher.reloadTokens()
+      console.log('✅ [ADMIN] Crypto price fetcher reloaded')
     }
 
+    console.log('🎉 [ADMIN] Token added successfully!')
     res.json({ success: true, logoUrl })
   } catch (error: any) {
-    res.status(400).json({ error: error.message })
+    console.error('❌ [ADMIN] Error adding token:', error)
+    res.status(400).json({ error: error.message || 'Failed to add token' })
   }
 })
 

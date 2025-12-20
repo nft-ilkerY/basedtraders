@@ -78,6 +78,13 @@ export default function AdminPanel({ fid }: AdminPanelProps) {
     try {
       const actualPrice = parseFloat(newToken.initial_price)
 
+      console.log('Adding token:', {
+        symbol: newToken.symbol.toUpperCase(),
+        name: newToken.name,
+        initial_price: actualPrice,
+        is_real_crypto: newToken.is_real_crypto
+      })
+
       const response = await fetch('https://basedtraders.onrender.com/api/admin/tokens', {
         method: 'POST',
         headers: {
@@ -93,13 +100,19 @@ export default function AdminPanel({ fid }: AdminPanelProps) {
       })
 
       if (response.ok) {
+        const data = await response.json()
+        console.log('Token added successfully:', data)
+        alert('Token added successfully!')
         setNewToken({ symbol: '', name: '', initial_price: '', is_real_crypto: false })
         loadData()
       } else {
-        alert('Failed to add token')
+        const errorData = await response.json()
+        console.error('Failed to add token:', errorData)
+        alert(`Failed to add token: ${errorData.error || 'Unknown error'}`)
       }
     } catch (error) {
-      alert('Error adding token')
+      console.error('Error adding token:', error)
+      alert(`Error adding token: ${error}`)
     }
   }
 
