@@ -576,14 +576,25 @@ export default function Profile({ profile, isLoggedIn }: ProfileProps) {
                         profitPercent: shareModal.profitPercent.toFixed(2)
                       })
 
-                      // Use direct PNG URL - Farcaster will display it as an image
+                      // Fetch image as Blob to embed directly in cast
                       const imageUrl = `https://basedtraders.onrender.com/api/share-image-png?${params}`
+                      console.log('🎨 Fetching share image:', imageUrl)
+
+                      const imageResponse = await fetch(imageUrl)
+                      const imageBlob = await imageResponse.blob()
+                      console.log('✅ Image fetched as Blob:', imageBlob.size, 'bytes')
+
+                      // Convert Blob to File object (Farcaster SDK expects File)
+                      const imageFile = new File([imageBlob], 'share.png', { type: 'image/png' })
+                      console.log('✅ Converted to File object:', imageFile.name, imageFile.size, 'bytes')
+
                       const miniappUrl = 'https://farcaster.xyz/miniapps/YgDPslIu3Xrt/basedtraders'
                       const castText = `🎯 Just closed a ${shareModal.leverage}x ${shareModal.token} position with +$${shareModal.profit.toFixed(2)} profit (+${shareModal.profitPercent.toFixed(1)}%) on @basedtraders! 💰\n\nThink you can do better?`
 
+                      // Embed image as File (renders directly in cast)
                       await sdk.actions.composeCast({
                         text: castText,
-                        embeds: [imageUrl, miniappUrl]
+                        embeds: [imageFile, miniappUrl]
                       })
                       setShareModal(null)
                     } catch (error) {
