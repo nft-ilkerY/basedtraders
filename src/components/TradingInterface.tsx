@@ -621,8 +621,25 @@ export default function TradingInterface({ profile, isLoggedIn }: TradingInterfa
                 <button
                   onClick={async () => {
                     try {
-                      // Generate PNG image URL - backend will create and save the image
-                      const imageUrl = `https://basedtraders.onrender.com/api/share-image-png?token=${shareModal.token}&leverage=${shareModal.leverage}&profit=${shareModal.profit.toFixed(2)}&profitPercent=${shareModal.profitPercent.toFixed(2)}`
+                      // Create share image and get static PNG URL
+                      const response = await fetch('https://basedtraders.onrender.com/api/create-share-image', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          token: shareModal.token,
+                          leverage: shareModal.leverage,
+                          profit: shareModal.profit.toFixed(2),
+                          profitPercent: shareModal.profitPercent.toFixed(2)
+                        })
+                      })
+
+                      const data = await response.json()
+
+                      if (!data.success || !data.imageUrl) {
+                        throw new Error('Failed to create share image')
+                      }
+
+                      const imageUrl = data.imageUrl // Static PNG URL: https://basedtraders.onrender.com/shares/share-{hash}.png
                       const miniappUrl = 'https://farcaster.xyz/miniapps/YgDPslIu3Xrt/basedtraders'
                       const castText = `🎯 Just closed a ${shareModal.leverage}x ${shareModal.token} position with +$${shareModal.profit.toFixed(2)} profit (+${shareModal.profitPercent.toFixed(1)}%) on @basedtraders! 💰\n\nThink you can do better?`
 
