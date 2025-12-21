@@ -22,7 +22,6 @@
     "ogDescription": "Play the ultimate trading game. Use leverage and become the top trader on Base",
     "ogImageUrl": "https://basetraders.vercel.app/logo.png",
     "webhookUrl": "https://basetraders.vercel.app/api/webhook",
-    "castShareUrl": "https://basetraders.vercel.app/share",
     "license": "MIT",
     "privacyPolicyUrl": "https://basetraders.vercel.app/",
     "tags": [
