@@ -1244,7 +1244,7 @@ app.delete('/api/admin/tokens/:id', isAdmin, async (req, res) => {
     if (positions && positions.length > 0) {
       console.log(`📋 [ADMIN] Found ${positions.length} position(s) for this token`)
 
-      // Refund collateral for all open positions
+      // Refund collateral and close all open positions
       for (const position of positions) {
         // If position is still open, refund collateral to player
         if (!position.closed_at) {
@@ -1258,7 +1258,7 @@ app.delete('/api/admin/tokens/:id', isAdmin, async (req, res) => {
             .single()
 
           if (!playerError && player) {
-            // Refund collateral
+            // Refund collateral (this is the amount they put in)
             const newCash = player.cash + position.collateral
             await supabase
               .from('players')
@@ -1269,17 +1269,30 @@ app.delete('/api/admin/tokens/:id', isAdmin, async (req, res) => {
               .eq('farcaster_fid', position.player_fid)
 
             refundedPlayers++
-            console.log(`  ✅ Refunded! Player cash: ${player.cash} → ${newCash}`)
+            console.log(`  ✅ Refunded $${position.collateral}! Player cash: ${player.cash} → ${newCash}`)
           }
 
+          // Close the position with 0 PnL (refund only, no profit/loss)
+          // This makes it disappear from /api/positions/:fid/open endpoint
+          await supabase
+            .from('positions')
+            .update({
+              closed_at: Date.now(),
+              close_price: position.entry_price,
+              pnl: 0,
+              is_liquidated: false
+            })
+            .eq('id', position.id)
+
           closedPositions++
+          console.log(`  ✅ Closed position ${position.id}`)
         }
       }
 
-      console.log(`✅ [ADMIN] Refunded ${refundedPlayers} player(s)`)
+      console.log(`✅ [ADMIN] Refunded ${refundedPlayers} player(s), closed ${closedPositions} position(s)`)
 
-      // Delete ALL positions for this token (both open and closed)
-      // This is necessary to avoid foreign key constraint violation
+      // Now delete ALL positions for this token (both newly closed and already closed)
+      // This is necessary to avoid foreign key constraint violation when deleting token
       const { error: deletePositionsError } = await supabase
         .from('positions')
         .delete()
@@ -1290,7 +1303,7 @@ app.delete('/api/admin/tokens/:id', isAdmin, async (req, res) => {
         throw deletePositionsError
       }
 
-      console.log(`✅ [ADMIN] Deleted all ${positions.length} position(s)`)
+      console.log(`✅ [ADMIN] Deleted all ${positions.length} position(s) from database`)
     }
 
     // Delete price history for this token
