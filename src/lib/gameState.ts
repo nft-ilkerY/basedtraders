@@ -530,6 +530,15 @@ if (typeof window !== 'undefined') {
         console.log(`🔄 [GameState] Refreshing positions for FID ${fid}...`)
 
         try {
+          // Re-fetch player data (including updated cash after refund)
+          const playerResponse = await fetch(`${API_BASE}/player/${fid}`)
+          const playerData = await playerResponse.json()
+
+          if (playerData && playerData.cash !== undefined) {
+            state.cash = playerData.cash
+            console.log(`💰 [GameState] Updated cash for FID ${fid}: $${state.cash}`)
+          }
+
           // Re-fetch open positions from server
           const response = await fetch(`${API_BASE}/positions/${fid}/open`)
           const dbPositions = await response.json()
