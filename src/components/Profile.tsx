@@ -568,8 +568,8 @@ export default function Profile({ profile, isLoggedIn }: ProfileProps) {
                 <button
                   onClick={async () => {
                     try {
-                      // Create share image on server and get static URL
-                      const createResponse = await fetch('https://basedtraders.onrender.com/api/create-share-image', {
+                      // Create share image via Vercel proxy (no CORS issues)
+                      const createResponse = await fetch('https://basetraders.vercel.app/api/create-share-image', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -586,9 +586,8 @@ export default function Profile({ profile, isLoggedIn }: ProfileProps) {
                         throw new Error('Failed to create share image')
                       }
 
-                      // Extract filename from Render URL and create Vercel proxy URL
-                      const filename = data.imageUrl.split('/').pop()
-                      const imageUrl = `https://basetraders.vercel.app/api/shares/${filename}`
+                      // Image URL is already Vercel proxy URL from the response
+                      const imageUrl = data.imageUrl
                       const miniappUrl = 'https://farcaster.xyz/miniapps/YgDPslIu3Xrt/basedtraders'
                       const castText = `🎯 Just closed a ${shareModal.leverage}x ${shareModal.token} position with +$${shareModal.profit.toFixed(2)} profit (+${shareModal.profitPercent.toFixed(1)}%) on @basedtraders! 💰\n\nThink you can do better?`
 

@@ -80,6 +80,7 @@ const isDev = process.env.NODE_ENV !== 'production'
 const allowedOrigins = [
   'https://basetraders.vercel.app',
   'https://warpcast.com',
+  'https://farcaster.xyz',
   'http://localhost:5173', // Local development
   'http://localhost:3000'  // Local development
 ]

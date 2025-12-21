@@ -1,6 +1,16 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Set CORS headers for all requests
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+
+  // Handle OPTIONS request
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end()
+  }
+
   try {
     const { filename } = req.query
 
@@ -27,7 +37,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Content-Type', 'image/png')
     res.setHeader('Content-Disposition', 'inline')
     res.setHeader('Cache-Control', 'public, max-age=3600, immutable')
-    res.setHeader('Access-Control-Allow-Origin', '*')
 
     // Send image
     res.send(Buffer.from(imageBuffer))
