@@ -586,12 +586,13 @@ export default function Profile({ profile, isLoggedIn }: ProfileProps) {
                         throw new Error('Failed to create share image')
                       }
 
-                      // Use static image URL - Warpcast will cache this to their servers
-                      const imageUrl = data.imageUrl
+                      // Extract filename from Render URL and create Vercel proxy URL
+                      const filename = data.imageUrl.split('/').pop()
+                      const imageUrl = `https://basetraders.vercel.app/api/shares/${filename}`
                       const miniappUrl = 'https://farcaster.xyz/miniapps/YgDPslIu3Xrt/basedtraders'
                       const castText = `🎯 Just closed a ${shareModal.leverage}x ${shareModal.token} position with +$${shareModal.profit.toFixed(2)} profit (+${shareModal.profitPercent.toFixed(1)}%) on @basedtraders! 💰\n\nThink you can do better?`
 
-                      console.log('📡 Sharing with static image URL:', imageUrl)
+                      console.log('📡 Sharing with Vercel proxy URL:', imageUrl)
 
                       // Warpcast will fetch and cache the image from static URL
                       await sdk.actions.composeCast({
