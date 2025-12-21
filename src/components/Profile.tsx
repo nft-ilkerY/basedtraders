@@ -568,7 +568,7 @@ export default function Profile({ profile, isLoggedIn }: ProfileProps) {
                 <button
                   onClick={async () => {
                     try {
-                      // Generate parameters for PNG image
+                      // Generate parameters for Frame HTML page
                       const params = new URLSearchParams({
                         token: shareModal.token,
                         leverage: shareModal.leverage.toString(),
@@ -576,38 +576,16 @@ export default function Profile({ profile, isLoggedIn }: ProfileProps) {
                         profitPercent: shareModal.profitPercent.toFixed(2)
                       })
 
-                      // Fetch image and convert to base64 data URL for inline embedding
-                      const imageUrl = `https://basedtraders.onrender.com/api/share-image-png?${params}`
-                      console.log('🎨 Fetching share image:', imageUrl)
-
-                      const imageResponse = await fetch(imageUrl)
-                      const imageBlob = await imageResponse.blob()
-                      console.log('✅ Image fetched as Blob:', imageBlob.size, 'bytes')
-
-                      // Convert Blob to ArrayBuffer then to base64
-                      const arrayBuffer = await imageBlob.arrayBuffer()
-                      const base64 = btoa(
-                        new Uint8Array(arrayBuffer).reduce(
-                          (data, byte) => data + String.fromCharCode(byte),
-                          ''
-                        )
-                      )
-                      const dataUrl = `data:image/png;base64,${base64}`
-                      console.log('✅ Converted to data URL, size:', dataUrl.length, 'chars')
-
-                      // Create File from data URL (self-contained, no external URL needed)
-                      const response = await fetch(dataUrl)
-                      const blob = await response.blob()
-                      const imageFile = new File([blob], 'share.png', { type: 'image/png' })
-                      console.log('✅ Created File from data URL')
-
-                      const miniappUrl = 'https://farcaster.xyz/miniapps/YgDPslIu3Xrt/basedtraders'
+                      // Use Frame HTML URL (Farcaster will parse meta tags and render image inline)
+                      const frameUrl = `https://basedtraders.onrender.com/api/share-image?${params}`
                       const castText = `🎯 Just closed a ${shareModal.leverage}x ${shareModal.token} position with +$${shareModal.profit.toFixed(2)} profit (+${shareModal.profitPercent.toFixed(1)}%) on @basedtraders! 💰\n\nThink you can do better?`
 
-                      // Embed image as File (completely self-contained, no external URL)
+                      console.log('📡 Sharing with Frame URL:', frameUrl)
+
+                      // Farcaster will fetch the Frame HTML and render the image inline
                       await sdk.actions.composeCast({
                         text: castText,
-                        embeds: [imageFile, miniappUrl]
+                        embeds: [frameUrl]
                       })
                       setShareModal(null)
                     } catch (error) {
