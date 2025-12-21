@@ -568,22 +568,32 @@ export default function Profile({ profile, isLoggedIn }: ProfileProps) {
                 <button
                   onClick={async () => {
                     try {
-                      // Generate parameters for PNG image
-                      const params = new URLSearchParams({
-                        token: shareModal.token,
-                        leverage: shareModal.leverage.toString(),
-                        profit: shareModal.profit.toFixed(2),
-                        profitPercent: shareModal.profitPercent.toFixed(2)
+                      // Create share image on server and get static URL
+                      const createResponse = await fetch('https://basedtraders.onrender.com/api/create-share-image', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          token: shareModal.token,
+                          leverage: shareModal.leverage,
+                          profit: shareModal.profit.toFixed(2),
+                          profitPercent: shareModal.profitPercent.toFixed(2)
+                        })
                       })
 
-                      // Use direct PNG URL - Warpcast will cache this image to their servers
-                      const imageUrl = `https://basedtraders.onrender.com/api/share-image-png?${params}`
+                      const data = await createResponse.json()
+
+                      if (!data.success || !data.imageUrl) {
+                        throw new Error('Failed to create share image')
+                      }
+
+                      // Use static image URL - Warpcast will cache this to their servers
+                      const imageUrl = data.imageUrl
                       const miniappUrl = 'https://farcaster.xyz/miniapps/YgDPslIu3Xrt/basedtraders'
                       const castText = `🎯 Just closed a ${shareModal.leverage}x ${shareModal.token} position with +$${shareModal.profit.toFixed(2)} profit (+${shareModal.profitPercent.toFixed(1)}%) on @basedtraders! 💰\n\nThink you can do better?`
 
-                      console.log('📡 Sharing with direct PNG URL:', imageUrl)
+                      console.log('📡 Sharing with static image URL:', imageUrl)
 
-                      // Warpcast will fetch and cache the image from our temporary URL
+                      // Warpcast will fetch and cache the image from static URL
                       await sdk.actions.composeCast({
                         text: castText,
                         embeds: [imageUrl, miniappUrl]

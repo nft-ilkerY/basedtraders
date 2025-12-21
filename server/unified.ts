@@ -1768,7 +1768,112 @@ app.get('/api/share-image', async (req, res) => {
   res.send(html)
 })
 
-// Share image PNG generation endpoint - saves to disk and returns URL
+// Share image creation endpoint - POST to create image, returns static URL
+app.post('/api/create-share-image', async (req, res) => {
+  try {
+    const { token, leverage, profit, profitPercent } = req.body
+
+    console.log('🎨 Creating share image for:', { token, leverage, profit, profitPercent })
+
+    // Generate unique filename
+    const imageHash = generateImageHash(
+      token || 'BATR',
+      (leverage || 1).toString(),
+      (profit || 0).toString(),
+      (profitPercent || 0).toString()
+    )
+    const filename = `share-${imageHash}.png`
+    const filePath = path.join(SHARES_DIR, filename)
+
+    // Check if image already exists
+    if (fs.existsSync(filePath)) {
+      console.log('✅ Share image already exists, returning static URL')
+      return res.json({
+        success: true,
+        imageUrl: `https://basedtraders.onrender.com/shares/${filename}`
+      })
+    }
+
+    // Create canvas
+    const canvas = createCanvas(1200, 630)
+    const ctx = canvas.getContext('2d')
+
+    // Background
+    ctx.fillStyle = '#0f1117'
+    ctx.fillRect(0, 0, 1200, 630)
+
+    // Add decorative circles
+    ctx.fillStyle = 'rgba(0, 0, 255, 0.15)'
+    ctx.beginPath()
+    ctx.arc(1000, 100, 250, 0, Math.PI * 2)
+    ctx.fill()
+
+    ctx.fillStyle = 'rgba(34, 197, 94, 0.15)'
+    ctx.beginPath()
+    ctx.arc(200, 530, 250, 0, Math.PI * 2)
+    ctx.fill()
+
+    // Load and draw menulogo
+    try {
+      const logoPath = path.join(__dirname, '..', 'public', 'menulogo.png')
+      const logo = await loadImage(logoPath)
+      ctx.drawImage(logo, 525, 30, 150, 150)
+    } catch (error) {
+      console.error('Failed to load menulogo.png:', error)
+    }
+
+    // Title
+    ctx.fillStyle = '#22c55e'
+    ctx.font = 'bold 60px Arial'
+    ctx.textAlign = 'center'
+    ctx.fillText('Profitable Trade!', 600, 240)
+
+    // Stats background
+    ctx.fillStyle = 'rgba(10, 12, 18, 0.7)'
+    ctx.beginPath()
+    ctx.roundRect(150, 280, 900, 280, 20)
+    ctx.fill()
+
+    // Stats labels
+    ctx.fillStyle = '#9ca3af'
+    ctx.font = '32px Arial'
+    ctx.textAlign = 'left'
+    ctx.fillText('Token:', 200, 340)
+    ctx.fillText('Leverage:', 200, 400)
+    ctx.fillText('Profit:', 200, 460)
+    ctx.fillText('Return:', 200, 520)
+
+    // Values
+    ctx.textAlign = 'right'
+    ctx.fillStyle = '#ffffff'
+    ctx.font = 'bold 40px Arial'
+    ctx.fillText(token, 1000, 340)
+
+    ctx.fillStyle = '#0000FF'
+    ctx.fillText(`${leverage}x`, 1000, 400)
+
+    ctx.fillStyle = '#22c55e'
+    ctx.fillText(`+$${profit}`, 1000, 460)
+    ctx.fillText(`+${profitPercent}%`, 1000, 520)
+
+    // Convert to buffer and save to disk
+    const buffer = canvas.toBuffer('image/png')
+    fs.writeFileSync(filePath, buffer)
+
+    console.log('✅ Generated and saved share image:', filename)
+
+    // Return static URL
+    res.json({
+      success: true,
+      imageUrl: `https://basedtraders.onrender.com/shares/${filename}`
+    })
+  } catch (error: any) {
+    console.error('Error creating share image:', error)
+    res.status(500).json({ error: error.message })
+  }
+})
+
+// Share image PNG generation endpoint - saves to disk and returns URL (kept for backwards compatibility)
 app.get('/api/share-image-png', async (req, res) => {
   const token = req.query.token as string || 'BATR'
   const leverage = req.query.leverage as string || '1'
