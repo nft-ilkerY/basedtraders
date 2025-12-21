@@ -568,7 +568,7 @@ export default function Profile({ profile, isLoggedIn }: ProfileProps) {
                 <button
                   onClick={async () => {
                     try {
-                      // Generate parameters for Frame HTML page
+                      // Generate parameters for PNG image
                       const params = new URLSearchParams({
                         token: shareModal.token,
                         leverage: shareModal.leverage.toString(),
@@ -576,16 +576,17 @@ export default function Profile({ profile, isLoggedIn }: ProfileProps) {
                         profitPercent: shareModal.profitPercent.toFixed(2)
                       })
 
-                      // Use Frame HTML URL (Farcaster will parse meta tags and render image inline)
-                      const frameUrl = `https://basedtraders.onrender.com/api/share-image?${params}`
+                      // Use direct PNG URL - Warpcast will cache this image to their servers
+                      const imageUrl = `https://basedtraders.onrender.com/api/share-image-png?${params}`
+                      const miniappUrl = 'https://farcaster.xyz/miniapps/YgDPslIu3Xrt/basedtraders'
                       const castText = `🎯 Just closed a ${shareModal.leverage}x ${shareModal.token} position with +$${shareModal.profit.toFixed(2)} profit (+${shareModal.profitPercent.toFixed(1)}%) on @basedtraders! 💰\n\nThink you can do better?`
 
-                      console.log('📡 Sharing with Frame URL:', frameUrl)
+                      console.log('📡 Sharing with direct PNG URL:', imageUrl)
 
-                      // Farcaster will fetch the Frame HTML and render the image inline
+                      // Warpcast will fetch and cache the image from our temporary URL
                       await sdk.actions.composeCast({
                         text: castText,
-                        embeds: [frameUrl]
+                        embeds: [imageUrl, miniappUrl]
                       })
                       setShareModal(null)
                     } catch (error) {
