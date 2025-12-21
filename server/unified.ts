@@ -32,18 +32,16 @@ if (!fs.existsSync(SHARES_DIR)) {
   console.log('📁 Created shares directory:', SHARES_DIR)
 }
 
-// Generate unique hash for each share (includes timestamp)
+// Generate hash for share image (deterministic based on trade data)
 function generateImageHash(token: string, leverage: string, profit: string, profitPercent: string): string {
-  const timestamp = Date.now()
-  const randomSuffix = Math.random().toString(36).substring(7)
-  const data = `${token}-${leverage}-${profit}-${profitPercent}-${timestamp}-${randomSuffix}`
+  const data = `${token}-${leverage}-${profit}-${profitPercent}`
   return crypto.createHash('md5').update(data).digest('hex')
 }
 
-// Clean up old share images (delete files older than 5 minutes)
+// Clean up old share images (delete files older than 1 hour)
 function cleanupShareImages() {
   const now = Date.now()
-  const maxAge = 5 * 60 * 1000 // 5 minutes
+  const maxAge = 60 * 60 * 1000 // 1 hour
   let deletedCount = 0
 
   try {
@@ -172,10 +170,10 @@ app.use(express.json())
 
 // Serve static share images from public/shares
 app.use('/shares', express.static(SHARES_DIR, {
-  maxAge: '5m',
+  maxAge: '1h',
   setHeaders: (res) => {
     res.setHeader('Access-Control-Allow-Origin', '*')
-    res.setHeader('Cache-Control', 'public, max-age=300')
+    res.setHeader('Cache-Control', 'public, max-age=3600')
   }
 }))
 
@@ -1770,7 +1768,7 @@ app.get('/api/share-image', async (req, res) => {
   res.send(html)
 })
 
-// Share image PNG generation endpoint - generates and serves directly (no disk storage)
+// Share image PNG generation endpoint - saves to disk and returns URL
 app.get('/api/share-image-png', async (req, res) => {
   const token = req.query.token as string || 'BATR'
   const leverage = req.query.leverage as string || '1'
@@ -1778,6 +1776,20 @@ app.get('/api/share-image-png', async (req, res) => {
   const profitPercent = req.query.profitPercent as string || '0'
 
   console.log('🎨 Generating share image for:', { token, leverage, profit, profitPercent })
+
+  // Generate unique filename
+  const imageHash = generateImageHash(token, leverage, profit, profitPercent)
+  const filename = `share-${imageHash}.png`
+  const filePath = path.join(SHARES_DIR, filename)
+
+  // Check if image already exists
+  if (fs.existsSync(filePath)) {
+    console.log('✅ Share image already exists, serving from disk')
+    res.setHeader('Content-Type', 'image/png')
+    res.setHeader('Cache-Control', 'public, max-age=3600')
+    res.setHeader('Access-Control-Allow-Origin', '*')
+    return res.sendFile(filePath)
+  }
 
   // Create canvas
   const canvas = createCanvas(1200, 630)
@@ -1841,15 +1853,17 @@ app.get('/api/share-image-png', async (req, res) => {
   ctx.fillText(`+$${profit}`, 1000, 460)
   ctx.fillText(`+${profitPercent}%`, 1000, 520)
 
-  // Convert to buffer and send directly (no disk storage)
+  // Convert to buffer
   const buffer = canvas.toBuffer('image/png')
 
-  console.log('✅ Generated share image, sending directly')
+  // Save to disk
+  fs.writeFileSync(filePath, buffer)
+  console.log('✅ Generated and saved share image to disk:', filename)
 
-  // Send the image directly
+  // Send the image
   res.setHeader('Content-Type', 'image/png')
   res.setHeader('Content-Length', buffer.length.toString())
-  res.setHeader('Cache-Control', 'public, max-age=300')
+  res.setHeader('Cache-Control', 'public, max-age=3600')
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.send(buffer)
 })
