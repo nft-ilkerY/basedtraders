@@ -621,13 +621,14 @@ export default function TradingInterface({ profile, isLoggedIn }: TradingInterfa
                 <button
                   onClick={async () => {
                     try {
-                      // Use share-image endpoint that includes profit data in meta tags
-                      const shareUrl = `https://basedtraders.onrender.com/api/share-image?token=${shareModal.token}&leverage=${shareModal.leverage}&profit=${shareModal.profit.toFixed(2)}&profitPercent=${shareModal.profitPercent.toFixed(2)}`
+                      // Generate PNG image URL - backend will create and save the image
+                      const imageUrl = `https://basedtraders.onrender.com/api/share-image-png?token=${shareModal.token}&leverage=${shareModal.leverage}&profit=${shareModal.profit.toFixed(2)}&profitPercent=${shareModal.profitPercent.toFixed(2)}`
+                      const miniappUrl = 'https://farcaster.xyz/miniapps/YgDPslIu3Xrt/basedtraders'
                       const castText = `🎯 Just closed a ${shareModal.leverage}x ${shareModal.token} position with +$${shareModal.profit.toFixed(2)} profit (+${shareModal.profitPercent.toFixed(1)}%) on @basedtraders! 💰\n\nThink you can do better?`
 
                       await sdk.actions.composeCast({
                         text: castText,
-                        embeds: [shareUrl]
+                        embeds: [imageUrl, miniappUrl]
                       })
                       setShareModal(null)
                     } catch (error) {
