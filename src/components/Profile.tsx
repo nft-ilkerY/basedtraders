@@ -576,7 +576,7 @@ export default function Profile({ profile, isLoggedIn }: ProfileProps) {
                         profitPercent: shareModal.profitPercent.toFixed(2)
                       })
 
-                      // Fetch image as Blob to embed directly in cast
+                      // Fetch image and convert to base64 data URL for inline embedding
                       const imageUrl = `https://basedtraders.onrender.com/api/share-image-png?${params}`
                       console.log('🎨 Fetching share image:', imageUrl)
 
@@ -584,14 +584,27 @@ export default function Profile({ profile, isLoggedIn }: ProfileProps) {
                       const imageBlob = await imageResponse.blob()
                       console.log('✅ Image fetched as Blob:', imageBlob.size, 'bytes')
 
-                      // Convert Blob to File object (Farcaster SDK expects File)
-                      const imageFile = new File([imageBlob], 'share.png', { type: 'image/png' })
-                      console.log('✅ Converted to File object:', imageFile.name, imageFile.size, 'bytes')
+                      // Convert Blob to ArrayBuffer then to base64
+                      const arrayBuffer = await imageBlob.arrayBuffer()
+                      const base64 = btoa(
+                        new Uint8Array(arrayBuffer).reduce(
+                          (data, byte) => data + String.fromCharCode(byte),
+                          ''
+                        )
+                      )
+                      const dataUrl = `data:image/png;base64,${base64}`
+                      console.log('✅ Converted to data URL, size:', dataUrl.length, 'chars')
+
+                      // Create File from data URL (self-contained, no external URL needed)
+                      const response = await fetch(dataUrl)
+                      const blob = await response.blob()
+                      const imageFile = new File([blob], 'share.png', { type: 'image/png' })
+                      console.log('✅ Created File from data URL')
 
                       const miniappUrl = 'https://farcaster.xyz/miniapps/YgDPslIu3Xrt/basedtraders'
                       const castText = `🎯 Just closed a ${shareModal.leverage}x ${shareModal.token} position with +$${shareModal.profit.toFixed(2)} profit (+${shareModal.profitPercent.toFixed(1)}%) on @basedtraders! 💰\n\nThink you can do better?`
 
-                      // Embed image as File (renders directly in cast)
+                      // Embed image as File (completely self-contained, no external URL)
                       await sdk.actions.composeCast({
                         text: castText,
                         embeds: [imageFile, miniappUrl]
