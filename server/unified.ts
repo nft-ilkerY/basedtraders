@@ -1228,16 +1228,66 @@ app.delete('/api/admin/tokens/:id', isAdmin, async (req, res) => {
       return res.status(400).json({ error: 'Invalid token ID' })
     }
 
-    // Check if there are any positions using this token
-    const { count, error: countError } = await supabase
+    console.log(`🗑️ [ADMIN] Deleting token ${tokenId}...`)
+
+    // Get all positions for this token
+    const { data: positions, error: posError } = await supabase
       .from('positions')
-      .select('*', { count: 'exact', head: true })
+      .select('*')
       .eq('token_id', tokenId)
 
-    if (countError) throw countError
+    if (posError) throw posError
 
-    if (count && count > 0) {
-      return res.status(400).json({ error: `Cannot delete token: ${count} position(s) exist for this token. Please close all positions first or deactivate the token instead.` })
+    let refundedPlayers = 0
+    let closedPositions = 0
+
+    if (positions && positions.length > 0) {
+      console.log(`📋 [ADMIN] Found ${positions.length} position(s) for this token`)
+
+      // Process each position
+      for (const position of positions) {
+        // If position is still open, refund collateral to player
+        if (!position.closed_at) {
+          console.log(`💰 [ADMIN] Refunding ${position.collateral} to player ${position.player_fid} for open position ${position.id}`)
+
+          // Get player's current cash
+          const { data: player, error: playerError } = await supabase
+            .from('players')
+            .select('cash')
+            .eq('farcaster_fid', position.player_fid)
+            .single()
+
+          if (!playerError && player) {
+            // Refund collateral
+            const newCash = player.cash + position.collateral
+            await supabase
+              .from('players')
+              .update({
+                cash: newCash,
+                updated_at: Date.now()
+              })
+              .eq('farcaster_fid', position.player_fid)
+
+            refundedPlayers++
+            console.log(`  ✅ Refunded! Player cash: ${player.cash} → ${newCash}`)
+          }
+
+          // Close the position with 0 PnL (refund only)
+          await supabase
+            .from('positions')
+            .update({
+              closed_at: Date.now(),
+              close_price: position.entry_price,
+              pnl: 0,
+              is_liquidated: false
+            })
+            .eq('id', position.id)
+
+          closedPositions++
+        }
+      }
+
+      console.log(`✅ [ADMIN] Refunded ${refundedPlayers} player(s), closed ${closedPositions} position(s)`)
     }
 
     // Delete price history for this token
@@ -1248,6 +1298,8 @@ app.delete('/api/admin/tokens/:id', isAdmin, async (req, res) => {
 
     if (historyError) throw historyError
 
+    console.log(`✅ [ADMIN] Deleted price history`)
+
     // Delete the token
     const { error: deleteError } = await supabase
       .from('tokens')
@@ -1256,8 +1308,16 @@ app.delete('/api/admin/tokens/:id', isAdmin, async (req, res) => {
 
     if (deleteError) throw deleteError
 
-    res.json({ success: true })
+    console.log(`🎉 [ADMIN] Token deleted successfully!`)
+
+    res.json({
+      success: true,
+      refunded_players: refundedPlayers,
+      closed_positions: closedPositions,
+      total_positions: positions?.length || 0
+    })
   } catch (error: any) {
+    console.error('❌ [ADMIN] Error deleting token:', error)
     res.status(400).json({ error: error.message })
   }
 })

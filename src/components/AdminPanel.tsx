@@ -173,7 +173,7 @@ export default function AdminPanel({ fid }: AdminPanelProps) {
   }
 
   const handleDeleteToken = async (tokenId: number) => {
-    if (!confirm('Are you sure you want to delete this token?')) return
+    if (!confirm('Are you sure you want to delete this token?\n\nIf there are open positions, collateral will be refunded to players automatically.')) return
 
     try {
       const response = await fetch(`https://basedtraders.onrender.com/api/admin/tokens/${tokenId}`, {
@@ -184,12 +184,24 @@ export default function AdminPanel({ fid }: AdminPanelProps) {
       })
 
       if (response.ok) {
+        const data = await response.json()
+        console.log('Token deleted:', data)
+
+        let message = 'Token deleted successfully!'
+        if (data.refunded_players > 0) {
+          message += `\n\nRefunded ${data.refunded_players} player(s)`
+          message += `\nClosed ${data.closed_positions} open position(s)`
+          message += `\nTotal ${data.total_positions} position(s) processed`
+        }
+
+        alert(message)
         loadData()
       } else {
         const errorData = await response.json()
         alert(errorData.error || 'Error deleting token')
       }
     } catch (error) {
+      console.error('Error deleting token:', error)
       alert('Error deleting token')
     }
   }
