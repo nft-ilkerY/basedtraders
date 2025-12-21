@@ -568,32 +568,14 @@ export default function Profile({ profile, isLoggedIn }: ProfileProps) {
                 <button
                   onClick={async () => {
                     try {
-                      // Create share image via Vercel proxy (no CORS issues)
-                      const createResponse = await fetch('https://basetraders.vercel.app/api/create-share-image', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          token: shareModal.token,
-                          leverage: shareModal.leverage,
-                          profit: shareModal.profit.toFixed(2),
-                          profitPercent: shareModal.profitPercent.toFixed(2)
-                        })
-                      })
-
-                      const data = await createResponse.json()
-
-                      if (!data.success || !data.imageUrl) {
-                        throw new Error('Failed to create share image')
-                      }
-
-                      // Image URL is already Vercel proxy URL from the response
-                      const imageUrl = data.imageUrl
+                      // Generate share image URL directly (no server request needed!)
+                      const imageUrl = `https://basetraders.vercel.app/api/share-image?token=${shareModal.token}&leverage=${shareModal.leverage}&profit=${shareModal.profit.toFixed(2)}&profitPercent=${shareModal.profitPercent.toFixed(2)}`
                       const miniappUrl = 'https://farcaster.xyz/miniapps/YgDPslIu3Xrt/basedtraders'
                       const castText = `🎯 Just closed a ${shareModal.leverage}x ${shareModal.token} position with +$${shareModal.profit.toFixed(2)} profit (+${shareModal.profitPercent.toFixed(1)}%) on @basedtraders! 💰\n\nThink you can do better?`
 
-                      console.log('📡 Sharing with Vercel proxy URL:', imageUrl)
+                      console.log('📡 Sharing with Vercel OG image URL:', imageUrl)
 
-                      // Warpcast will fetch and cache the image from static URL
+                      // Warpcast will fetch and cache the image from Vercel edge
                       await sdk.actions.composeCast({
                         text: castText,
                         embeds: [imageUrl, miniappUrl]
