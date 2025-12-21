@@ -1786,8 +1786,10 @@ app.get('/api/share-image-png', async (req, res) => {
   if (fs.existsSync(filePath)) {
     console.log('✅ Share image already exists, serving from disk')
     res.setHeader('Content-Type', 'image/png')
-    res.setHeader('Cache-Control', 'public, max-age=3600')
+    res.setHeader('Content-Disposition', 'inline')
+    res.setHeader('Cache-Control', 'public, max-age=3600, immutable')
     res.setHeader('Access-Control-Allow-Origin', '*')
+    res.setHeader('Accept-Ranges', 'bytes')
     return res.sendFile(filePath)
   }
 
@@ -1860,12 +1862,13 @@ app.get('/api/share-image-png', async (req, res) => {
   fs.writeFileSync(filePath, buffer)
   console.log('✅ Generated and saved share image to disk:', filename)
 
-  // Send the image
+  // Send the image from disk (better binary handling)
   res.setHeader('Content-Type', 'image/png')
-  res.setHeader('Content-Length', buffer.length.toString())
-  res.setHeader('Cache-Control', 'public, max-age=3600')
+  res.setHeader('Content-Disposition', 'inline')
+  res.setHeader('Cache-Control', 'public, max-age=3600, immutable')
   res.setHeader('Access-Control-Allow-Origin', '*')
-  res.send(buffer)
+  res.setHeader('Accept-Ranges', 'bytes')
+  res.sendFile(filePath)
 })
 
 // Serve static files in production
