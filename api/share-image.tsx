@@ -1,13 +1,12 @@
 import { ImageResponse } from '@vercel/og'
-import type { VercelRequest } from '@vercel/node'
 
 export const config = {
   runtime: 'edge',
 }
 
-export default async function handler(req: VercelRequest) {
+export default async function handler(req: Request) {
   try {
-    const { searchParams } = new URL(req.url!)
+    const { searchParams } = new URL(req.url)
 
     const token = searchParams.get('token') || 'BATR'
     const leverage = searchParams.get('leverage') || '1'
