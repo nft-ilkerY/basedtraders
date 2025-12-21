@@ -568,7 +568,7 @@ export default function Profile({ profile, isLoggedIn }: ProfileProps) {
                 <button
                   onClick={async () => {
                     try {
-                      // Generate parameters for PNG URL
+                      // Generate parameters for share URL
                       const params = new URLSearchParams({
                         token: shareModal.token,
                         leverage: shareModal.leverage.toString(),
@@ -576,14 +576,13 @@ export default function Profile({ profile, isLoggedIn }: ProfileProps) {
                         profitPercent: shareModal.profitPercent.toFixed(2)
                       })
 
-                      // Use direct API endpoint URL (not saved to disk, served directly)
-                      const imageUrl = `https://basedtraders.onrender.com/api/share-image-png?${params}`
-                      const miniappUrl = 'https://farcaster.xyz/miniapps/YgDPslIu3Xrt/basedtraders'
+                      // Use HTML endpoint with Frame meta tags (Farcaster can read these)
+                      const shareUrl = `https://basedtraders.onrender.com/api/share-image?${params}`
                       const castText = `🎯 Just closed a ${shareModal.leverage}x ${shareModal.token} position with +$${shareModal.profit.toFixed(2)} profit (+${shareModal.profitPercent.toFixed(1)}%) on @basedtraders! 💰\n\nThink you can do better?`
 
                       await sdk.actions.composeCast({
                         text: castText,
-                        embeds: [imageUrl, miniappUrl]
+                        embeds: [shareUrl]
                       })
                       setShareModal(null)
                     } catch (error) {
