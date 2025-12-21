@@ -621,8 +621,8 @@ export default function TradingInterface({ profile, isLoggedIn }: TradingInterfa
                 <button
                   onClick={async () => {
                     try {
-                      // Use Vercel OG edge function for image generation
-                      const imageUrl = `https://basetraders.vercel.app/api/share-image?token=${shareModal.token}&leverage=${shareModal.leverage}&profit=${shareModal.profit.toFixed(2)}&profitPercent=${shareModal.profitPercent.toFixed(2)}`
+                      // Use Render backend for PNG image generation
+                      const imageUrl = `https://basedtraders.onrender.com/api/share-image-png?token=${shareModal.token}&leverage=${shareModal.leverage}&profit=${shareModal.profit.toFixed(2)}&profitPercent=${shareModal.profitPercent.toFixed(2)}`
                       const miniappUrl = 'https://farcaster.xyz/miniapps/YgDPslIu3Xrt/basedtraders'
                       const castText = `🎯 Just closed a ${shareModal.leverage}x ${shareModal.token} position with +$${shareModal.profit.toFixed(2)} profit (+${shareModal.profitPercent.toFixed(1)}%) on @basedtraders! 💰\n\nThink you can do better?\n\n${imageUrl}`
 
