@@ -632,11 +632,11 @@ export default function TradingInterface({ profile, isLoggedIn }: TradingInterfa
                       // Use direct API endpoint URL (not saved to disk, served directly)
                       const imageUrl = `https://basedtraders.onrender.com/api/share-image-png?${params}`
                       const miniappUrl = 'https://farcaster.xyz/miniapps/YgDPslIu3Xrt/basedtraders'
-                      const castText = `🎯 Just closed a ${shareModal.leverage}x ${shareModal.token} position with +$${shareModal.profit.toFixed(2)} profit (+${shareModal.profitPercent.toFixed(1)}%) on @basedtraders! 💰\n\nThink you can do better?`
+                      const castText = `🎯 Just closed a ${shareModal.leverage}x ${shareModal.token} position with +$${shareModal.profit.toFixed(2)} profit (+${shareModal.profitPercent.toFixed(1)}%) on @basedtraders! 💰\n\nThink you can do better?\n\n${imageUrl}`
 
                       await sdk.actions.composeCast({
                         text: castText,
-                        embeds: [imageUrl, miniappUrl]
+                        embeds: [miniappUrl]
                       })
                       setShareModal(null)
                     } catch (error) {
