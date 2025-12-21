@@ -515,3 +515,93 @@ export class GameState {
 }
 
 export const gameState = new GameState()
+
+// Listen for position close events from admin token deletion
+if (typeof window !== 'undefined') {
+  window.addEventListener('positions_closed', async (event: Event) => {
+    const customEvent = event as CustomEvent<{ player_fids: number[] }>
+    const affectedFids = customEvent.detail.player_fids
+
+    console.log('🔔 [GameState] Positions closed event received for FIDs:', affectedFids)
+
+    // Check all active players and refresh their positions if affected
+    playerStates.forEach(async (state, fid) => {
+      if (affectedFids.includes(fid)) {
+        console.log(`🔄 [GameState] Refreshing positions for FID ${fid}...`)
+
+        try {
+          // Re-fetch open positions from server
+          const response = await fetch(`${API_BASE}/positions/${fid}/open`)
+          const dbPositions = await response.json()
+
+          console.log(`📥 [GameState] Fetched ${dbPositions.length} open positions for FID ${fid}`)
+
+          // Get current price for position updates
+          const priceResponse = await fetch(`${API_BASE}/price`)
+          const priceData = await priceResponse.json()
+          const currentPrice = priceData.price
+
+          // Convert database positions to game state positions
+          const positions: Position[] = Array.isArray(dbPositions) ? dbPositions.map((dbPos: any) => {
+            const priceChange = currentPrice - dbPos.entry_price
+            const priceChangePercent = priceChange / dbPos.entry_price
+
+            let pnl: number
+            if (dbPos.type === 'LONG') {
+              pnl = dbPos.size * priceChangePercent
+            } else {
+              pnl = dbPos.size * -priceChangePercent
+            }
+
+            const pnlPercent = (pnl / dbPos.collateral) * 100
+            const liquidationPrice = calculateLiquidationPrice(
+              dbPos.entry_price,
+              dbPos.leverage,
+              dbPos.type
+            )
+
+            const isLiquidated = dbPos.type === 'LONG'
+              ? currentPrice <= liquidationPrice
+              : currentPrice >= liquidationPrice
+
+            return {
+              id: dbPos.id,
+              type: dbPos.type,
+              entryPrice: dbPos.entry_price,
+              currentPrice: currentPrice,
+              leverage: dbPos.leverage,
+              size: dbPos.size,
+              collateral: dbPos.collateral,
+              pnl: isLiquidated ? -dbPos.collateral : pnl,
+              pnlPercent: isLiquidated ? -100 : pnlPercent,
+              liquidationPrice: liquidationPrice,
+              isLiquidated: isLiquidated,
+              openedAt: dbPos.opened_at,
+              token: dbPos.token_symbol || 'BATR',
+              lastFundingUpdate: dbPos.opened_at,
+            } as Position
+          }) : []
+
+          // Update player state with refreshed positions
+          state.positions = positions
+
+          // Recalculate total value
+          const positionsValue = positions
+            .filter(p => !p.isLiquidated)
+            .reduce((sum, p) => sum + p.collateral + p.pnl, 0)
+
+          state.totalValue = state.cash + positionsValue
+          state.pnl = state.totalValue - INITIAL_CASH
+          state.pnlPercent = (state.pnl / INITIAL_CASH) * 100
+
+          console.log(`✅ [GameState] Updated FID ${fid} - ${state.positions.length} positions, Total: $${state.totalValue.toFixed(2)}`)
+
+          // Notify listeners
+          gameState['notifyListeners'](state)
+        } catch (error) {
+          console.error(`❌ [GameState] Error refreshing positions for FID ${fid}:`, error)
+        }
+      }
+    })
+  })
+}

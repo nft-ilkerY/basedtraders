@@ -1291,6 +1291,20 @@ app.delete('/api/admin/tokens/:id', isAdmin, async (req, res) => {
 
       console.log(`✅ [ADMIN] Refunded ${refundedPlayers} player(s), closed ${closedPositions} position(s)`)
 
+      // Broadcast position close event to all connected clients
+      const affectedPlayerFids = [...new Set(positions.map(p => p.player_fid))]
+      console.log(`📡 [ADMIN] Broadcasting position close event to ${affectedPlayerFids.length} player(s)`)
+
+      wss.clients.forEach(client => {
+        if (client.readyState === 1) {
+          client.send(JSON.stringify({
+            type: 'positions_closed',
+            player_fids: affectedPlayerFids,
+            timestamp: Date.now()
+          }))
+        }
+      })
+
       // Now delete ALL positions for this token (both newly closed and already closed)
       // This is necessary to avoid foreign key constraint violation when deleting token
       const { error: deletePositionsError } = await supabase

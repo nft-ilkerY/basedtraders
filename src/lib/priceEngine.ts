@@ -65,6 +65,15 @@ class PriceEngine {
               this.notifyListenersForToken(symbol)
             })
           }
+
+          // Handle position close event from admin token deletion
+          if (data.type === 'positions_closed' && data.player_fids) {
+            console.log('📡 [WebSocket] Received positions_closed event for players:', data.player_fids)
+            // Dispatch custom event for GameState to handle
+            window.dispatchEvent(new CustomEvent('positions_closed', {
+              detail: { player_fids: data.player_fids }
+            }))
+          }
         } catch (error) {
           console.error('WebSocket message parse error:', error)
         }
