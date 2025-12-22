@@ -33,6 +33,7 @@ export default function TradingInterface({ profile, isLoggedIn }: TradingInterfa
   const [selectedToken, setSelectedToken] = useState<Token | null>(null)
   const [tokenSelectorOpen, setTokenSelectorOpen] = useState(false)
   const [notification, setNotification] = useState<string | null>(null)
+  const [isSharing, setIsSharing] = useState(false)
   const [shareModal, setShareModal] = useState<{
     show: boolean
     profit: number
@@ -495,6 +496,7 @@ export default function TradingInterface({ profile, isLoggedIn }: TradingInterfa
                             const result = await gameState.closePosition(profile.fid, id)
                             // Show share modal if position closed with profit
                             if (result.success && result.profit !== undefined && result.profit > 0) {
+                              setIsSharing(false) // Reset sharing state
                               setShareModal({
                                 show: true,
                                 profit: result.profit,
@@ -621,6 +623,7 @@ export default function TradingInterface({ profile, isLoggedIn }: TradingInterfa
                 <button
                   onClick={async () => {
                     try {
+                      setIsSharing(true)
                       // Create share image and get static PNG URL
                       const response = await fetch('https://basedtraders.onrender.com/api/create-share-image', {
                         method: 'POST',
@@ -648,17 +651,29 @@ export default function TradingInterface({ profile, isLoggedIn }: TradingInterfa
                         embeds: [imageUrl, miniappUrl]
                       })
                       setShareModal(null)
+                      setIsSharing(false)
                     } catch (error) {
                       console.error('Failed to compose cast:', error)
+                      setIsSharing(false)
                       setShareModal(null)
                     }
                   }}
-                  className="w-full bg-gradient-to-r from-[#0000FF] to-[#4444FF] hover:from-[#0000DD] hover:to-[#3333DD] text-white font-bold py-4 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg shadow-[#0000FF]/50"
+                  disabled={isSharing}
+                  className="w-full bg-gradient-to-r from-[#0000FF] to-[#4444FF] hover:from-[#0000DD] hover:to-[#3333DD] text-white font-bold py-4 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg shadow-[#0000FF]/50 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2"
                 >
-                  Share Cast
+                  {isSharing && (
+                    <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  )}
+                  {isSharing ? 'Sharing...' : 'Share Cast'}
                 </button>
                 <button
-                  onClick={() => setShareModal(null)}
+                  onClick={() => {
+                    setIsSharing(false)
+                    setShareModal(null)
+                  }}
                   className="w-full bg-gray-700/50 hover:bg-gray-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300"
                 >
                   Skip
