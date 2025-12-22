@@ -642,9 +642,9 @@ export default function TradingInterface({ profile, isLoggedIn }: TradingInterfa
                         throw new Error('Failed to create share image')
                       }
 
-                      const imageUrl = data.imageUrl // Static PNG URL: https://basedtraders.onrender.com/shares/share-{hash}.png
+                      const imageUrl = data.imageUrl // Static PNG URL from Supabase Storage
                       const miniappUrl = 'https://farcaster.xyz/miniapps/YgDPslIu3Xrt/basedtraders'
-                      const castText = `🎯 Just closed a ${shareModal.leverage}x ${shareModal.token} position with +$${shareModal.profit.toFixed(2)} profit (+${shareModal.profitPercent.toFixed(1)}%) on @basedtraders! 💰\n\nThink you can do better?`
+                      const castText = `Just closed a ${shareModal.leverage}x ${shareModal.token} position with +$${shareModal.profit.toFixed(2)} profit (+${shareModal.profitPercent.toFixed(1)}%) on @basedtraders.\n\nCan you beat this?`
 
                       await sdk.actions.composeCast({
                         text: castText,
@@ -668,6 +668,20 @@ export default function TradingInterface({ profile, isLoggedIn }: TradingInterfa
                     </svg>
                   )}
                   {isSharing ? 'Sharing...' : 'Share Cast'}
+                </button>
+                <button
+                  onClick={() => {
+                    const tweetText = `Just closed a ${shareModal.leverage}x ${shareModal.token} position with +$${shareModal.profit.toFixed(2)} profit (+${shareModal.profitPercent.toFixed(1)}%) on BasedTraders.\n\nCan you beat this?\n\nPlay now:`
+                    const tweetUrl = 'https://farcaster.xyz/miniapps/YgDPslIu3Xrt/basedtraders'
+                    const twitterShareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent(tweetUrl)}`
+                    window.open(twitterShareUrl, '_blank')
+                  }}
+                  className="w-full bg-black hover:bg-gray-900 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                  </svg>
+                  Share on X
                 </button>
                 <button
                   onClick={() => {
