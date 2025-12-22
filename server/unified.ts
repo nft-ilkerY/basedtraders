@@ -1784,14 +1784,24 @@ app.post('/api/create-share-image', async (req, res) => {
       (profitPercent || 0).toString()
     )
     const filename = `share-${imageHash}.png`
-    const filePath = path.join(SHARES_DIR, filename)
 
-    // Check if image already exists
-    if (fs.existsSync(filePath)) {
-      console.log('✅ Share image already exists, returning static URL')
+    // Check if image already exists in Supabase Storage
+    const { data: existingFile } = await supabase.storage
+      .from('profit-images')
+      .list('', {
+        limit: 1,
+        search: filename
+      })
+
+    if (existingFile && existingFile.length > 0) {
+      console.log('✅ Share image already exists in Supabase Storage')
+      const { data: { publicUrl } } = supabase.storage
+        .from('profit-images')
+        .getPublicUrl(filename)
+
       return res.json({
         success: true,
-        imageUrl: `https://basedtraders.onrender.com/shares/${filename}`
+        imageUrl: publicUrl
       })
     }
 
@@ -1857,16 +1867,36 @@ app.post('/api/create-share-image', async (req, res) => {
     ctx.fillText(`+$${profit}`, 1000, 460)
     ctx.fillText(`+${profitPercent}%`, 1000, 520)
 
-    // Convert to buffer and save to disk
+    // Convert to buffer
     const buffer = canvas.toBuffer('image/png')
-    fs.writeFileSync(filePath, buffer)
 
-    console.log('✅ Generated and saved share image:', filename)
+    // Upload to Supabase Storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('profit-images')
+      .upload(filename, buffer, {
+        contentType: 'image/png',
+        cacheControl: '3600',
+        upsert: false
+      })
 
-    // Return static URL
+    if (uploadError) {
+      console.error('❌ Supabase Storage upload error:', uploadError)
+      throw uploadError
+    }
+
+    console.log('✅ Uploaded share image to Supabase Storage:', filename)
+
+    // Get public URL
+    const { data: { publicUrl } } = supabase.storage
+      .from('profit-images')
+      .getPublicUrl(filename)
+
+    console.log('🔗 Public URL:', publicUrl)
+
+    // Return public URL
     res.json({
       success: true,
-      imageUrl: `https://basedtraders.onrender.com/shares/${filename}`
+      imageUrl: publicUrl
     })
   } catch (error: any) {
     console.error('Error creating share image:', error)
