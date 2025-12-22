@@ -37,7 +37,6 @@ export default function TradingInterface({ profile, isLoggedIn }: TradingInterfa
   const [isGeneratingImage, setIsGeneratingImage] = useState(false)
   const [imageGenerated, setImageGenerated] = useState(false)
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null)
-  const [generatedImageBlob, setGeneratedImageBlob] = useState<Blob | null>(null)
   const [shareModal, setShareModal] = useState<{
     show: boolean
     profit: number
@@ -505,7 +504,6 @@ export default function TradingInterface({ profile, isLoggedIn }: TradingInterfa
                               setIsGeneratingImage(false)
                               setImageGenerated(false)
                               setGeneratedImageUrl(null)
-                              setGeneratedImageBlob(null)
                               setShareModal({
                                 show: true,
                                 profit: result.profit,
@@ -653,12 +651,7 @@ export default function TradingInterface({ profile, isLoggedIn }: TradingInterfa
                           throw new Error('Failed to create share image')
                         }
 
-                        // Download image as blob for sharing
-                        const imageResponse = await fetch(data.imageUrl)
-                        const imageBlob = await imageResponse.blob()
-
                         setGeneratedImageUrl(data.imageUrl)
-                        setGeneratedImageBlob(imageBlob)
                         setImageGenerated(true)
                         setIsGeneratingImage(false)
                       } catch (error) {
@@ -714,8 +707,9 @@ export default function TradingInterface({ profile, isLoggedIn }: TradingInterfa
                     </button>
                     <button
                       onClick={() => {
+                        const sharePageUrl = `https://basedtraders.onrender.com/api/share-image?token=${encodeURIComponent(shareModal.token)}&leverage=${shareModal.leverage}&profit=${shareModal.profit.toFixed(2)}&profitPercent=${shareModal.profitPercent.toFixed(2)}`
                         const appUrl = 'https://farcaster.xyz/miniapps/YgDPslIu3Xrt/basedtraders'
-                        const tweetText = `I just closed a ${shareModal.leverage}x ${shareModal.token} position with $${shareModal.profit.toFixed(2)} profit (+${shareModal.profitPercent.toFixed(1)}%) on Based Traders!\n\n${appUrl}\n\n${generatedImageUrl}`
+                        const tweetText = `I just closed a ${shareModal.leverage}x ${shareModal.token} position with $${shareModal.profit.toFixed(2)} profit (+${shareModal.profitPercent.toFixed(1)}%) on Based Traders!\n\n${appUrl}\n\n${sharePageUrl}`
                         const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`
                         window.open(tweetUrl, '_blank')
                       }}
@@ -735,7 +729,6 @@ export default function TradingInterface({ profile, isLoggedIn }: TradingInterfa
                     setIsGeneratingImage(false)
                     setImageGenerated(false)
                     setGeneratedImageUrl(null)
-                    setGeneratedImageBlob(null)
                     setShareModal(null)
                   }}
                   className="w-full bg-gray-700/50 hover:bg-gray-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300"
