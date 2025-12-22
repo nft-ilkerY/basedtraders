@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/icon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="base:app_id" content="6946f9acd77c069a945be309" />
+
+    <!-- Open Graph / Social Share Meta Tags -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://basetraders.vercel.app" />
+    <meta property="og:title" content="BasedTraders – Leverage Trading Game" />
+    <meta property="og:description" content="Trade with leverage, compete on the leaderboard, and prove you're the best trader on Base" />
+    <meta property="og:image" content="https://basetraders.vercel.app/image.png" />
+
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://basetraders.vercel.app" />
+    <meta name="twitter:title" content="BasedTraders – Leverage Trading Game" />
+    <meta name="twitter:description" content="Trade with leverage, compete on the leaderboard, and prove you're the best trader on Base" />
+    <meta name="twitter:image" content="https://basetraders.vercel.app/image.png" />
+
+    <!-- Farcaster Frame Meta Tags -->
+    <meta property="fc:frame" content="vNext" />
+    <meta property="fc:frame:image" content="https://basetraders.vercel.app/image.png" />
+    <meta property="fc:frame:button:1" content="Play Now" />
+    <meta property="fc:frame:button:1:action" content="link" />
+    <meta property="fc:frame:button:1:target" content="https://basetraders.vercel.app" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <title>BasedTraders – Leverage Trading Game</title>
+    <script type="module" crossorigin src="/assets/index-B7t-D8Yz.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/vendor-DXoOnQMM.js">
+    <link rel="modulepreload" crossorigin href="/assets/farcaster-BGB9JV90.js">
+    <link rel="stylesheet" crossorigin href="/assets/index-CzEGFmG_.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

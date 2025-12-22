@@ -1719,7 +1719,21 @@ app.get('/api/share-image', async (req, res) => {
   const profit = req.query.profit as string || '0'
   const profitPercent = req.query.profitPercent as string || '0'
 
-  const imageUrl = `https://basedtraders.onrender.com/api/share-image-png?token=${encodeURIComponent(token)}&leverage=${leverage}&profit=${profit}&profitPercent=${profitPercent}`
+  // Generate image filename hash (same as POST endpoint)
+  const imageHash = generateImageHash(
+    token,
+    leverage,
+    profit,
+    profitPercent
+  )
+  const filename = `share-${imageHash}.png`
+
+  // Get Supabase Storage public URL
+  const { data: { publicUrl } } = supabase.storage
+    .from('profit-images')
+    .getPublicUrl(filename)
+
+  const imageUrl = publicUrl
   const miniappUrl = 'https://farcaster.xyz/miniapps/YgDPslIu3Xrt/basedtraders'
 
   const html = `<!DOCTYPE html>
@@ -1738,7 +1752,7 @@ app.get('/api/share-image', async (req, res) => {
   <!-- Farcaster Frame (fallback) -->
   <meta property="fc:frame" content="vNext" />
   <meta property="fc:frame:image" content="${imageUrl}" />
-  <meta property="fc:frame:image:aspect_ratio" content="1.91:1" />
+  <meta property="fc:frame:image:aspect_ratio" content="1:1" />
   <meta property="fc:frame:button:1" content="Play Now" />
   <meta property="fc:frame:button:1:action" content="link" />
   <meta property="fc:frame:button:1:target" content="${miniappUrl}" />
@@ -1748,7 +1762,7 @@ app.get('/api/share-image', async (req, res) => {
   <meta property="og:description" content="${leverage}x ${token} position closed with +$${profit} profit (+${profitPercent}%)" />
   <meta property="og:image" content="${imageUrl}" />
   <meta property="og:image:width" content="1200" />
-  <meta property="og:image:height" content="630" />
+  <meta property="og:image:height" content="1200" />
   <meta property="og:url" content="${miniappUrl}" />
 
   <!-- Twitter Card -->
