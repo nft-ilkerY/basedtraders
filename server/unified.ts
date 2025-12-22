@@ -1869,11 +1869,19 @@ app.get('/api/share-image', async (req, res) => {
   <meta name="twitter:title" content="Profitable Trade on Based Traders!" />
   <meta name="twitter:description" content="${leverage}x ${token} position closed with +$${profit} profit!" />
   <meta name="twitter:image" content="${imageUrl}" />
+
+  <script>
+    // Redirect to app after 1 second (allows Twitter Card to load first)
+    setTimeout(function() {
+      window.location.href = '${miniappUrl}';
+    }, 1000);
+  </script>
 </head>
-<body style="margin: 0; padding: 20px; font-family: Arial, sans-serif; background: #0f1117; color: white;">
+<body style="margin: 0; padding: 20px; font-family: Arial, sans-serif; background: #0f1117; color: white; text-align: center;">
   <h1>🎯 Profitable Trade!</h1>
   <p>${leverage}x ${token} position closed with +$${profit} profit (+${profitPercent}%)</p>
-  <a href="${miniappUrl}" style="color: #0000FF;">Play Now on Based Traders</a>
+  <p style="color: #22c55e; margin-top: 20px;">Redirecting to Based Traders...</p>
+  <a href="${miniappUrl}" style="color: #0000FF; text-decoration: underline;">Click here if not redirected</a>
 </body>
 </html>`
 
