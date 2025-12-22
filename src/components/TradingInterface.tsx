@@ -710,9 +710,17 @@ export default function TradingInterface({ profile, isLoggedIn }: TradingInterfa
                         setIsSharing(false)
                       }
 
+                      console.log('Share on X - Image URL:', imageUrl)
+
                       // Create tweet with image link and play link
-                      const tweetText = `Just closed a ${shareModal.leverage}x ${shareModal.token} position with +$${shareModal.profit.toFixed(2)} profit (+${shareModal.profitPercent.toFixed(1)}%) on BasedTraders.\n\nCan you beat this?\n\nProfit Screenshot:\n${imageUrl}\n\nPlay now:\nhttps://farcaster.xyz/miniapps/YgDPslIu3Xrt/basedtraders`
+                      const tweetText = `Just closed a ${shareModal.leverage}x ${shareModal.token} position with +$${shareModal.profit.toFixed(2)} profit (+${shareModal.profitPercent.toFixed(1)}%) on BasedTraders.\n\nCan you beat this?\n\n📸 ${imageUrl}\n\nPlay now: https://farcaster.xyz/miniapps/YgDPslIu3Xrt/basedtraders`
+
+                      console.log('Share on X - Tweet Text:', tweetText)
+
                       const twitterShareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`
+
+                      console.log('Share on X - Twitter URL:', twitterShareUrl)
+
                       window.open(twitterShareUrl, '_blank')
                     } catch (error) {
                       console.error('Failed to create share image:', error)
