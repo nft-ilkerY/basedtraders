@@ -1870,11 +1870,10 @@ app.get('/api/share-image', async (req, res) => {
   <meta name="twitter:description" content="${leverage}x ${token} position closed with +$${profit} profit!" />
   <meta name="twitter:image" content="${imageUrl}" />
 
+  <meta http-equiv="refresh" content="0;url=${miniappUrl}">
   <script>
-    // Redirect to app after 1 second (allows Twitter Card to load first)
-    setTimeout(function() {
-      window.location.href = '${miniappUrl}';
-    }, 1000);
+    // Immediate redirect
+    window.location.replace('${miniappUrl}');
   </script>
 </head>
 <body style="margin: 0; padding: 20px; font-family: Arial, sans-serif; background: #0f1117; color: white; text-align: center;">
