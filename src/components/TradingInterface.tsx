@@ -34,6 +34,7 @@ export default function TradingInterface({ profile, isLoggedIn }: TradingInterfa
   const [tokenSelectorOpen, setTokenSelectorOpen] = useState(false)
   const [notification, setNotification] = useState<string | null>(null)
   const [isSharing, setIsSharing] = useState(false)
+  const [shareImageUrl, setShareImageUrl] = useState<string | null>(null)
   const [shareModal, setShareModal] = useState<{
     show: boolean
     profit: number
@@ -497,6 +498,7 @@ export default function TradingInterface({ profile, isLoggedIn }: TradingInterfa
                             // Show share modal if position closed with profit
                             if (result.success && result.profit !== undefined && result.profit > 0) {
                               setIsSharing(false) // Reset sharing state
+                              setShareImageUrl(null) // Reset cached image URL
                               setShareModal({
                                 show: true,
                                 profit: result.profit,
@@ -624,25 +626,32 @@ export default function TradingInterface({ profile, isLoggedIn }: TradingInterfa
                   onClick={async () => {
                     try {
                       setIsSharing(true)
-                      // Create share image and get static PNG URL
-                      const response = await fetch('https://basedtraders.onrender.com/api/create-share-image', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          token: shareModal.token,
-                          leverage: shareModal.leverage,
-                          profit: shareModal.profit.toFixed(2),
-                          profitPercent: shareModal.profitPercent.toFixed(2)
+
+                      // Use cached image URL or create new one
+                      let imageUrl = shareImageUrl
+                      if (!imageUrl) {
+                        // Create share image and get static PNG URL
+                        const response = await fetch('https://basedtraders.onrender.com/api/create-share-image', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            token: shareModal.token,
+                            leverage: shareModal.leverage,
+                            profit: shareModal.profit.toFixed(2),
+                            profitPercent: shareModal.profitPercent.toFixed(2)
+                          })
                         })
-                      })
 
-                      const data = await response.json()
+                        const data = await response.json()
 
-                      if (!data.success || !data.imageUrl) {
-                        throw new Error('Failed to create share image')
+                        if (!data.success || !data.imageUrl) {
+                          throw new Error('Failed to create share image')
+                        }
+
+                        imageUrl = data.imageUrl // Static PNG URL from Supabase Storage
+                        setShareImageUrl(imageUrl)
                       }
 
-                      const imageUrl = data.imageUrl // Static PNG URL from Supabase Storage
                       const miniappUrl = 'https://farcaster.xyz/miniapps/YgDPslIu3Xrt/basedtraders'
                       const castText = `Just closed a ${shareModal.leverage}x ${shareModal.token} position with +$${shareModal.profit.toFixed(2)} profit (+${shareModal.profitPercent.toFixed(1)}%) on @basedtraders.\n\nCan you beat this?`
 
@@ -652,10 +661,12 @@ export default function TradingInterface({ profile, isLoggedIn }: TradingInterfa
                       })
                       setShareModal(null)
                       setIsSharing(false)
+                      setShareImageUrl(null)
                     } catch (error) {
                       console.error('Failed to compose cast:', error)
                       setIsSharing(false)
                       setShareModal(null)
+                      setShareImageUrl(null)
                     }
                   }}
                   disabled={isSharing}
@@ -670,22 +681,63 @@ export default function TradingInterface({ profile, isLoggedIn }: TradingInterfa
                   {isSharing ? 'Sharing...' : 'Share Cast'}
                 </button>
                 <button
-                  onClick={() => {
-                    const tweetText = `Just closed a ${shareModal.leverage}x ${shareModal.token} position with +$${shareModal.profit.toFixed(2)} profit (+${shareModal.profitPercent.toFixed(1)}%) on BasedTraders.\n\nCan you beat this?\n\nPlay now:`
-                    const tweetUrl = 'https://farcaster.xyz/miniapps/YgDPslIu3Xrt/basedtraders'
-                    const twitterShareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent(tweetUrl)}`
-                    window.open(twitterShareUrl, '_blank')
+                  onClick={async () => {
+                    try {
+                      // Use cached image URL or create new one
+                      let imageUrl = shareImageUrl
+                      if (!imageUrl) {
+                        setIsSharing(true)
+                        // Create share image and get static PNG URL
+                        const response = await fetch('https://basedtraders.onrender.com/api/create-share-image', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            token: shareModal.token,
+                            leverage: shareModal.leverage,
+                            profit: shareModal.profit.toFixed(2),
+                            profitPercent: shareModal.profitPercent.toFixed(2)
+                          })
+                        })
+
+                        const data = await response.json()
+
+                        if (!data.success || !data.imageUrl) {
+                          throw new Error('Failed to create share image')
+                        }
+
+                        imageUrl = data.imageUrl // Static PNG URL from Supabase Storage
+                        setShareImageUrl(imageUrl)
+                        setIsSharing(false)
+                      }
+
+                      const tweetText = `Just closed a ${shareModal.leverage}x ${shareModal.token} position with +$${shareModal.profit.toFixed(2)} profit (+${shareModal.profitPercent.toFixed(1)}%) on BasedTraders.\n\nCan you beat this?\n\n${imageUrl}\n\nPlay now:`
+                      const tweetUrl = 'https://farcaster.xyz/miniapps/YgDPslIu3Xrt/basedtraders'
+                      const twitterShareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent(tweetUrl)}`
+                      window.open(twitterShareUrl, '_blank')
+                    } catch (error) {
+                      console.error('Failed to create share image:', error)
+                      setIsSharing(false)
+                    }
                   }}
-                  className="w-full bg-black hover:bg-gray-900 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 flex items-center justify-center gap-2"
+                  disabled={isSharing}
+                  className="w-full bg-black hover:bg-gray-900 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                  </svg>
+                  {isSharing ? (
+                    <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                    </svg>
+                  )}
                   Share on X
                 </button>
                 <button
                   onClick={() => {
                     setIsSharing(false)
+                    setShareImageUrl(null)
                     setShareModal(null)
                   }}
                   className="w-full bg-gray-700/50 hover:bg-gray-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300"
