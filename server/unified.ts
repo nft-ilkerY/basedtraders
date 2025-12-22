@@ -1805,67 +1805,67 @@ app.post('/api/create-share-image', async (req, res) => {
       })
     }
 
-    // Create canvas
-    const canvas = createCanvas(1200, 630)
+    // Create canvas (SQUARE format 1200x1200)
+    const canvas = createCanvas(1200, 1200)
     const ctx = canvas.getContext('2d')
 
     // Background
     ctx.fillStyle = '#0f1117'
-    ctx.fillRect(0, 0, 1200, 630)
+    ctx.fillRect(0, 0, 1200, 1200)
 
     // Add decorative circles
     ctx.fillStyle = 'rgba(0, 0, 255, 0.15)'
     ctx.beginPath()
-    ctx.arc(1000, 100, 250, 0, Math.PI * 2)
+    ctx.arc(950, 200, 300, 0, Math.PI * 2)
     ctx.fill()
 
     ctx.fillStyle = 'rgba(34, 197, 94, 0.15)'
     ctx.beginPath()
-    ctx.arc(200, 530, 250, 0, Math.PI * 2)
+    ctx.arc(250, 1000, 300, 0, Math.PI * 2)
     ctx.fill()
 
     // Load and draw menulogo
     try {
       const logoPath = path.join(__dirname, '..', 'public', 'menulogo.png')
       const logo = await loadImage(logoPath)
-      ctx.drawImage(logo, 525, 30, 150, 150)
+      ctx.drawImage(logo, 475, 80, 250, 250)
     } catch (error) {
       console.error('Failed to load menulogo.png:', error)
     }
 
     // Title
     ctx.fillStyle = '#22c55e'
-    ctx.font = 'bold 60px Arial'
+    ctx.font = 'bold 70px Arial'
     ctx.textAlign = 'center'
-    ctx.fillText('Profitable Trade!', 600, 240)
+    ctx.fillText('Profitable Trade!', 600, 410)
 
     // Stats background
     ctx.fillStyle = 'rgba(10, 12, 18, 0.7)'
     ctx.beginPath()
-    ctx.roundRect(150, 280, 900, 280, 20)
+    ctx.roundRect(100, 480, 1000, 520, 20)
     ctx.fill()
 
     // Stats labels
     ctx.fillStyle = '#9ca3af'
-    ctx.font = '32px Arial'
+    ctx.font = '38px Arial'
     ctx.textAlign = 'left'
-    ctx.fillText('Token:', 200, 340)
-    ctx.fillText('Leverage:', 200, 400)
-    ctx.fillText('Profit:', 200, 460)
-    ctx.fillText('Return:', 200, 520)
+    ctx.fillText('Token:', 180, 580)
+    ctx.fillText('Leverage:', 180, 700)
+    ctx.fillText('Profit:', 180, 820)
+    ctx.fillText('Return:', 180, 940)
 
     // Values
     ctx.textAlign = 'right'
     ctx.fillStyle = '#ffffff'
-    ctx.font = 'bold 40px Arial'
-    ctx.fillText(token, 1000, 340)
+    ctx.font = 'bold 48px Arial'
+    ctx.fillText(token, 1020, 580)
 
     ctx.fillStyle = '#0000FF'
-    ctx.fillText(`${leverage}x`, 1000, 400)
+    ctx.fillText(`${leverage}x`, 1020, 700)
 
     ctx.fillStyle = '#22c55e'
-    ctx.fillText(`+$${profit}`, 1000, 460)
-    ctx.fillText(`+${profitPercent}%`, 1000, 520)
+    ctx.fillText(`+$${profit}`, 1020, 820)
+    ctx.fillText(`+${profitPercent}%`, 1020, 940)
 
     // Convert to buffer
     const buffer = canvas.toBuffer('image/png')
@@ -1929,67 +1929,67 @@ app.get('/api/share-image-png', async (req, res) => {
     return res.sendFile(filePath)
   }
 
-  // Create canvas
-  const canvas = createCanvas(1200, 630)
+  // Create canvas (SQUARE format 1200x1200)
+  const canvas = createCanvas(1200, 1200)
   const ctx = canvas.getContext('2d')
 
   // Background
   ctx.fillStyle = '#0f1117'
-  ctx.fillRect(0, 0, 1200, 630)
+  ctx.fillRect(0, 0, 1200, 1200)
 
   // Add decorative circles
   ctx.fillStyle = 'rgba(0, 0, 255, 0.15)'
   ctx.beginPath()
-  ctx.arc(1000, 100, 250, 0, Math.PI * 2)
+  ctx.arc(950, 200, 300, 0, Math.PI * 2)
   ctx.fill()
 
   ctx.fillStyle = 'rgba(34, 197, 94, 0.15)'
   ctx.beginPath()
-  ctx.arc(200, 530, 250, 0, Math.PI * 2)
+  ctx.arc(250, 1000, 300, 0, Math.PI * 2)
   ctx.fill()
 
   // Load and draw menulogo
   try {
     const logoPath = path.join(__dirname, '..', 'public', 'menulogo.png')
     const logo = await loadImage(logoPath)
-    ctx.drawImage(logo, 525, 30, 150, 150)
+    ctx.drawImage(logo, 475, 80, 250, 250)
   } catch (error) {
     console.error('Failed to load menulogo.png:', error)
   }
 
   // Title
   ctx.fillStyle = '#22c55e'
-  ctx.font = 'bold 60px Arial'
+  ctx.font = 'bold 70px Arial'
   ctx.textAlign = 'center'
-  ctx.fillText('Profitable Trade!', 600, 240)
+  ctx.fillText('Profitable Trade!', 600, 410)
 
   // Stats background
   ctx.fillStyle = 'rgba(10, 12, 18, 0.7)'
   ctx.beginPath()
-  ctx.roundRect(150, 280, 900, 280, 20)
+  ctx.roundRect(100, 480, 1000, 520, 20)
   ctx.fill()
 
   // Stats labels
   ctx.fillStyle = '#9ca3af'
-  ctx.font = '32px Arial'
+  ctx.font = '38px Arial'
   ctx.textAlign = 'left'
-  ctx.fillText('Token:', 200, 340)
-  ctx.fillText('Leverage:', 200, 400)
-  ctx.fillText('Profit:', 200, 460)
-  ctx.fillText('Return:', 200, 520)
+  ctx.fillText('Token:', 180, 580)
+  ctx.fillText('Leverage:', 180, 700)
+  ctx.fillText('Profit:', 180, 820)
+  ctx.fillText('Return:', 180, 940)
 
   // Values
   ctx.textAlign = 'right'
   ctx.fillStyle = '#ffffff'
-  ctx.font = 'bold 40px Arial'
-  ctx.fillText(token, 1000, 340)
+  ctx.font = 'bold 48px Arial'
+  ctx.fillText(token, 1020, 580)
 
   ctx.fillStyle = '#0000FF'
-  ctx.fillText(`${leverage}x`, 1000, 400)
+  ctx.fillText(`${leverage}x`, 1020, 700)
 
   ctx.fillStyle = '#22c55e'
-  ctx.fillText(`+$${profit}`, 1000, 460)
-  ctx.fillText(`+${profitPercent}%`, 1000, 520)
+  ctx.fillText(`+$${profit}`, 1020, 820)
+  ctx.fillText(`+${profitPercent}%`, 1020, 940)
 
   // Convert to buffer
   const buffer = canvas.toBuffer('image/png')
