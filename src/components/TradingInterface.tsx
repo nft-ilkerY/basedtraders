@@ -707,11 +707,9 @@ export default function TradingInterface({ profile, isLoggedIn }: TradingInterfa
                     </button>
                     <button
                       onClick={() => {
-                        // Create HTML page URL with meta tags for Twitter Card preview
-                        const sharePageUrl = `https://basedtraders.onrender.com/api/share-image?token=${encodeURIComponent(shareModal.token)}&leverage=${shareModal.leverage}&profit=${shareModal.profit.toFixed(2)}&profitPercent=${shareModal.profitPercent.toFixed(2)}`
                         const appUrl = 'https://farcaster.xyz/miniapps/YgDPslIu3Xrt/basedtraders'
-                        // Tweet format: Message + app link + blank line + HTML link (for Twitter Card preview)
-                        const tweetText = `I just closed a ${shareModal.leverage}x ${shareModal.token} position with $${shareModal.profit.toFixed(2)} profit (+${shareModal.profitPercent.toFixed(1)}%) on Based Traders!\n\n${appUrl}\n\n${sharePageUrl}`
+                        // Tweet format: Message + app link + blank line + direct image link
+                        const tweetText = `I just closed a ${shareModal.leverage}x ${shareModal.token} position with $${shareModal.profit.toFixed(2)} profit (+${shareModal.profitPercent.toFixed(1)}%) on Based Traders!\n\n${appUrl}\n\n${generatedImageUrl}`
                         const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`
                         window.open(tweetUrl, '_blank')
                       }}
