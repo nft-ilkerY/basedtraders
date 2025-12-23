@@ -96,42 +96,42 @@ async function generateShareImageCanvas(
     // Stats in vertical layout - all centered
     ctx.textAlign = 'center'
     const centerX = 600
-    let currentY = 340
+    let currentY = 330
 
     // Token
     ctx.fillStyle = '#9ca3af'
-    ctx.font = '28px Arial'
+    ctx.font = '36px Arial'
     ctx.fillText('Token', centerX, currentY)
     ctx.fillStyle = '#ffffff'
-    ctx.font = 'bold 45px Arial'
-    ctx.fillText(token, centerX, currentY + 50)
-    currentY += 130
+    ctx.font = 'bold 62px Arial'
+    ctx.fillText(token, centerX, currentY + 60)
+    currentY += 140
 
     // Leverage
     ctx.fillStyle = '#9ca3af'
-    ctx.font = '28px Arial'
+    ctx.font = '36px Arial'
     ctx.fillText('Leverage', centerX, currentY)
     ctx.fillStyle = '#0000FF'
-    ctx.font = 'bold 45px Arial'
-    ctx.fillText(`${leverage}x`, centerX, currentY + 50)
-    currentY += 130
+    ctx.font = 'bold 62px Arial'
+    ctx.fillText(`${leverage}x`, centerX, currentY + 60)
+    currentY += 140
 
     // Profit
     ctx.fillStyle = '#9ca3af'
-    ctx.font = '28px Arial'
+    ctx.font = '36px Arial'
     ctx.fillText('Profit', centerX, currentY)
     ctx.fillStyle = '#22c55e'
-    ctx.font = 'bold 45px Arial'
-    ctx.fillText(`+$${profit}`, centerX, currentY + 50)
-    currentY += 130
+    ctx.font = 'bold 62px Arial'
+    ctx.fillText(`+$${profit}`, centerX, currentY + 60)
+    currentY += 140
 
     // Return
     ctx.fillStyle = '#9ca3af'
-    ctx.font = '28px Arial'
+    ctx.font = '36px Arial'
     ctx.fillText('Return', centerX, currentY)
     ctx.fillStyle = '#22c55e'
-    ctx.font = 'bold 45px Arial'
-    ctx.fillText(`+${profitPercent}%`, centerX, currentY + 50)
+    ctx.font = 'bold 62px Arial'
+    ctx.fillText(`+${profitPercent}%`, centerX, currentY + 60)
 
     // Load and draw menulogo at bottom center
     try {
