@@ -709,7 +709,7 @@ export default function TradingInterface({ profile, isLoggedIn }: TradingInterfa
                       onClick={() => {
                         const sharePageUrl = `https://basedtraders.onrender.com/api/share-image?token=${encodeURIComponent(shareModal.token)}&leverage=${shareModal.leverage}&profit=${shareModal.profit.toFixed(2)}&profitPercent=${shareModal.profitPercent.toFixed(2)}`
                         const appUrl = 'https://farcaster.xyz/miniapps/YgDPslIu3Xrt/basedtraders'
-                        const tweetText = `I just closed a ${shareModal.leverage}x ${shareModal.token} position with $${shareModal.profit.toFixed(2)} profit (+${shareModal.profitPercent.toFixed(1)}%) on Based Traders!\n\n${appUrl}\n\n${sharePageUrl}`
+                        const tweetText = `I just closed a ${shareModal.leverage}x ${shareModal.token} position with $${shareModal.profit.toFixed(2)} profit (+${shareModal.profitPercent.toFixed(1)}%) on Based Traders!\n\nBasedTraders App: ${appUrl}\n\n${sharePageUrl}`
                         const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`
                         window.open(tweetUrl, '_blank')
                       }}

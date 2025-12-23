@@ -38,6 +38,87 @@ function generateImageHash(token: string, leverage: string, profit: string, prof
   return crypto.createHash('md5').update(data).digest('hex')
 }
 
+// Generate share image canvas (16:9 format 1200x675)
+async function generateShareImageCanvas(token: string, leverage: string, profit: string, profitPercent: string) {
+  const canvas = createCanvas(1200, 675)
+  const ctx = canvas.getContext('2d')
+
+  // Background
+  ctx.fillStyle = '#0f1117'
+  ctx.fillRect(0, 0, 1200, 675)
+
+  // Add decorative circles
+  ctx.fillStyle = 'rgba(0, 0, 255, 0.15)'
+  ctx.beginPath()
+  ctx.arc(950, 150, 250, 0, Math.PI * 2)
+  ctx.fill()
+
+  ctx.fillStyle = 'rgba(34, 197, 94, 0.15)'
+  ctx.beginPath()
+  ctx.arc(250, 525, 250, 0, Math.PI * 2)
+  ctx.fill()
+
+  // Load and draw menulogo
+  try {
+    const logoPath = path.join(__dirname, '..', 'public', 'menulogo.png')
+    const logo = await loadImage(logoPath)
+    ctx.drawImage(logo, 50, 50, 180, 180)
+  } catch (error) {
+    console.error('Failed to load menulogo.png:', error)
+  }
+
+  // Title
+  ctx.fillStyle = '#22c55e'
+  ctx.font = 'bold 55px Arial'
+  ctx.textAlign = 'left'
+  ctx.fillText('Profitable Trade!', 260, 140)
+
+  // Stats background
+  ctx.fillStyle = 'rgba(10, 12, 18, 0.7)'
+  ctx.beginPath()
+  ctx.roundRect(50, 270, 1100, 350, 20)
+  ctx.fill()
+
+  // Stats in a horizontal layout
+  const statsY = 370
+  const gap = 275
+
+  // Token
+  ctx.fillStyle = '#9ca3af'
+  ctx.font = '28px Arial'
+  ctx.textAlign = 'center'
+  ctx.fillText('Token', 120 + gap * 0, statsY - 30)
+  ctx.fillStyle = '#ffffff'
+  ctx.font = 'bold 40px Arial'
+  ctx.fillText(token, 120 + gap * 0, statsY + 20)
+
+  // Leverage
+  ctx.fillStyle = '#9ca3af'
+  ctx.font = '28px Arial'
+  ctx.fillText('Leverage', 120 + gap * 1, statsY - 30)
+  ctx.fillStyle = '#0000FF'
+  ctx.font = 'bold 40px Arial'
+  ctx.fillText(`${leverage}x`, 120 + gap * 1, statsY + 20)
+
+  // Profit
+  ctx.fillStyle = '#9ca3af'
+  ctx.font = '28px Arial'
+  ctx.fillText('Profit', 120 + gap * 2, statsY - 30)
+  ctx.fillStyle = '#22c55e'
+  ctx.font = 'bold 40px Arial'
+  ctx.fillText(`+$${profit}`, 120 + gap * 2, statsY + 20)
+
+  // Return
+  ctx.fillStyle = '#9ca3af'
+  ctx.font = '28px Arial'
+  ctx.fillText('Return', 120 + gap * 3, statsY - 30)
+  ctx.fillStyle = '#22c55e'
+  ctx.font = 'bold 40px Arial'
+  ctx.fillText(`+${profitPercent}%`, 120 + gap * 3, statsY + 20)
+
+  return canvas
+}
+
 // Clean up old share images (delete files older than 1 hour)
 function cleanupShareImages() {
   const now = Date.now()
@@ -1742,67 +1823,8 @@ app.get('/api/share-image', async (req, res) => {
   if (!existingFile || existingFile.length === 0) {
     console.log('⚠️ [SHARE] Image not found, creating it first...')
 
-    // Create canvas (SQUARE format 1200x1200)
-    const canvas = createCanvas(1200, 1200)
-    const ctx = canvas.getContext('2d')
-
-    // Background
-    ctx.fillStyle = '#0f1117'
-    ctx.fillRect(0, 0, 1200, 1200)
-
-    // Add decorative circles
-    ctx.fillStyle = 'rgba(0, 0, 255, 0.15)'
-    ctx.beginPath()
-    ctx.arc(950, 200, 300, 0, Math.PI * 2)
-    ctx.fill()
-
-    ctx.fillStyle = 'rgba(34, 197, 94, 0.15)'
-    ctx.beginPath()
-    ctx.arc(250, 1000, 300, 0, Math.PI * 2)
-    ctx.fill()
-
-    // Load and draw menulogo
-    try {
-      const logoPath = path.join(__dirname, '..', 'public', 'menulogo.png')
-      const logo = await loadImage(logoPath)
-      ctx.drawImage(logo, 475, 80, 250, 250)
-    } catch (error) {
-      console.error('Failed to load menulogo.png:', error)
-    }
-
-    // Title
-    ctx.fillStyle = '#22c55e'
-    ctx.font = 'bold 70px Arial'
-    ctx.textAlign = 'center'
-    ctx.fillText('Profitable Trade!', 600, 410)
-
-    // Stats background
-    ctx.fillStyle = 'rgba(10, 12, 18, 0.7)'
-    ctx.beginPath()
-    ctx.roundRect(100, 480, 1000, 520, 20)
-    ctx.fill()
-
-    // Stats labels
-    ctx.fillStyle = '#9ca3af'
-    ctx.font = '38px Arial'
-    ctx.textAlign = 'left'
-    ctx.fillText('Token:', 180, 580)
-    ctx.fillText('Leverage:', 180, 700)
-    ctx.fillText('Profit:', 180, 820)
-    ctx.fillText('Return:', 180, 940)
-
-    // Values
-    ctx.textAlign = 'right'
-    ctx.fillStyle = '#ffffff'
-    ctx.font = 'bold 48px Arial'
-    ctx.fillText(token, 1020, 580)
-
-    ctx.fillStyle = '#0000FF'
-    ctx.fillText(`${leverage}x`, 1020, 700)
-
-    ctx.fillStyle = '#22c55e'
-    ctx.fillText(`+$${profit}`, 1020, 820)
-    ctx.fillText(`+${profitPercent}%`, 1020, 940)
+    // Create 16:9 canvas using helper function
+    const canvas = await generateShareImageCanvas(token, leverage, profit, profitPercent)
 
     // Convert to buffer
     const buffer = canvas.toBuffer('image/png')
@@ -1851,7 +1873,7 @@ app.get('/api/share-image', async (req, res) => {
   <!-- Farcaster Frame (fallback) -->
   <meta property="fc:frame" content="vNext" />
   <meta property="fc:frame:image" content="${imageUrl}" />
-  <meta property="fc:frame:image:aspect_ratio" content="1:1" />
+  <meta property="fc:frame:image:aspect_ratio" content="1.91:1" />
   <meta property="fc:frame:button:1" content="Play Now" />
   <meta property="fc:frame:button:1:action" content="link" />
   <meta property="fc:frame:button:1:target" content="${miniappUrl}" />
@@ -1861,7 +1883,7 @@ app.get('/api/share-image', async (req, res) => {
   <meta property="og:description" content="${leverage}x ${token} position closed with +$${profit} profit (+${profitPercent}%)" />
   <meta property="og:image" content="${imageUrl}" />
   <meta property="og:image:width" content="1200" />
-  <meta property="og:image:height" content="1200" />
+  <meta property="og:image:height" content="675" />
   <meta property="og:url" content="${miniappUrl}" />
 
   <!-- Twitter Card -->
@@ -1925,67 +1947,13 @@ app.post('/api/create-share-image', async (req, res) => {
       })
     }
 
-    // Create canvas (SQUARE format 1200x1200)
-    const canvas = createCanvas(1200, 1200)
-    const ctx = canvas.getContext('2d')
-
-    // Background
-    ctx.fillStyle = '#0f1117'
-    ctx.fillRect(0, 0, 1200, 1200)
-
-    // Add decorative circles
-    ctx.fillStyle = 'rgba(0, 0, 255, 0.15)'
-    ctx.beginPath()
-    ctx.arc(950, 200, 300, 0, Math.PI * 2)
-    ctx.fill()
-
-    ctx.fillStyle = 'rgba(34, 197, 94, 0.15)'
-    ctx.beginPath()
-    ctx.arc(250, 1000, 300, 0, Math.PI * 2)
-    ctx.fill()
-
-    // Load and draw menulogo
-    try {
-      const logoPath = path.join(__dirname, '..', 'public', 'menulogo.png')
-      const logo = await loadImage(logoPath)
-      ctx.drawImage(logo, 475, 80, 250, 250)
-    } catch (error) {
-      console.error('Failed to load menulogo.png:', error)
-    }
-
-    // Title
-    ctx.fillStyle = '#22c55e'
-    ctx.font = 'bold 70px Arial'
-    ctx.textAlign = 'center'
-    ctx.fillText('Profitable Trade!', 600, 410)
-
-    // Stats background
-    ctx.fillStyle = 'rgba(10, 12, 18, 0.7)'
-    ctx.beginPath()
-    ctx.roundRect(100, 480, 1000, 520, 20)
-    ctx.fill()
-
-    // Stats labels
-    ctx.fillStyle = '#9ca3af'
-    ctx.font = '38px Arial'
-    ctx.textAlign = 'left'
-    ctx.fillText('Token:', 180, 580)
-    ctx.fillText('Leverage:', 180, 700)
-    ctx.fillText('Profit:', 180, 820)
-    ctx.fillText('Return:', 180, 940)
-
-    // Values
-    ctx.textAlign = 'right'
-    ctx.fillStyle = '#ffffff'
-    ctx.font = 'bold 48px Arial'
-    ctx.fillText(token, 1020, 580)
-
-    ctx.fillStyle = '#0000FF'
-    ctx.fillText(`${leverage}x`, 1020, 700)
-
-    ctx.fillStyle = '#22c55e'
-    ctx.fillText(`+$${profit}`, 1020, 820)
-    ctx.fillText(`+${profitPercent}%`, 1020, 940)
+    // Create 16:9 canvas using helper function
+    const canvas = await generateShareImageCanvas(
+      token || 'BATR',
+      (leverage || 1).toString(),
+      (profit || 0).toString(),
+      (profitPercent || 0).toString()
+    )
 
     // Convert to buffer
     const buffer = canvas.toBuffer('image/png')
@@ -2049,67 +2017,8 @@ app.get('/api/share-image-png', async (req, res) => {
     return res.sendFile(filePath)
   }
 
-  // Create canvas (SQUARE format 1200x1200)
-  const canvas = createCanvas(1200, 1200)
-  const ctx = canvas.getContext('2d')
-
-  // Background
-  ctx.fillStyle = '#0f1117'
-  ctx.fillRect(0, 0, 1200, 1200)
-
-  // Add decorative circles
-  ctx.fillStyle = 'rgba(0, 0, 255, 0.15)'
-  ctx.beginPath()
-  ctx.arc(950, 200, 300, 0, Math.PI * 2)
-  ctx.fill()
-
-  ctx.fillStyle = 'rgba(34, 197, 94, 0.15)'
-  ctx.beginPath()
-  ctx.arc(250, 1000, 300, 0, Math.PI * 2)
-  ctx.fill()
-
-  // Load and draw menulogo
-  try {
-    const logoPath = path.join(__dirname, '..', 'public', 'menulogo.png')
-    const logo = await loadImage(logoPath)
-    ctx.drawImage(logo, 475, 80, 250, 250)
-  } catch (error) {
-    console.error('Failed to load menulogo.png:', error)
-  }
-
-  // Title
-  ctx.fillStyle = '#22c55e'
-  ctx.font = 'bold 70px Arial'
-  ctx.textAlign = 'center'
-  ctx.fillText('Profitable Trade!', 600, 410)
-
-  // Stats background
-  ctx.fillStyle = 'rgba(10, 12, 18, 0.7)'
-  ctx.beginPath()
-  ctx.roundRect(100, 480, 1000, 520, 20)
-  ctx.fill()
-
-  // Stats labels
-  ctx.fillStyle = '#9ca3af'
-  ctx.font = '38px Arial'
-  ctx.textAlign = 'left'
-  ctx.fillText('Token:', 180, 580)
-  ctx.fillText('Leverage:', 180, 700)
-  ctx.fillText('Profit:', 180, 820)
-  ctx.fillText('Return:', 180, 940)
-
-  // Values
-  ctx.textAlign = 'right'
-  ctx.fillStyle = '#ffffff'
-  ctx.font = 'bold 48px Arial'
-  ctx.fillText(token, 1020, 580)
-
-  ctx.fillStyle = '#0000FF'
-  ctx.fillText(`${leverage}x`, 1020, 700)
-
-  ctx.fillStyle = '#22c55e'
-  ctx.fillText(`+$${profit}`, 1020, 820)
-  ctx.fillText(`+${profitPercent}%`, 1020, 940)
+  // Create 16:9 canvas using helper function
+  const canvas = await generateShareImageCanvas(token, leverage, profit, profitPercent)
 
   // Convert to buffer
   const buffer = canvas.toBuffer('image/png')
