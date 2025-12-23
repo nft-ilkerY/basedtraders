@@ -681,7 +681,7 @@ export default function TradingInterface({ profile, isLoggedIn }: TradingInterfa
                         try {
                           setIsSharing(true)
                           const miniappUrl = 'https://farcaster.xyz/miniapps/YgDPslIu3Xrt/basedtraders'
-                          const castText = `I just closed a ${shareModal.leverage}x ${shareModal.token} position on @basedtraders with $${shareModal.profit.toFixed(2)} profit (+${shareModal.profitPercent.toFixed(1)}%). Try it yourself!`
+                          const castText = `I just closed a ${shareModal.leverage}x ${shareModal.token} position on @basedtraders with $${shareModal.profit.toFixed(2)} profit (+${shareModal.profitPercent.toFixed(1)}%)! Try it yourself and test your trading skills.`
 
                           await sdk.actions.composeCast({
                             text: castText,
