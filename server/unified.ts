@@ -677,6 +677,15 @@ const priceEngine = new GlobalPriceEngine()
   console.log('✅ Price engine started')
 })()
 
+// Health check endpoint for uptime monitoring
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    timestamp: Date.now(),
+    uptime: process.uptime()
+  })
+})
+
 // API Routes
 app.get('/api/price', async (req, res) => {
   try {
