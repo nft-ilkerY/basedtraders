@@ -21,7 +21,7 @@
     "ogTitle": "BasedTraders",
     "ogDescription": "Play the ultimate trading game. Use leverage and become the top trader on Base",
     "ogImageUrl": "https://basetraders.vercel.app/logo.png",
-    "webhookUrl": "https://basetraders.vercel.app/api/webhook",
+    "webhookUrl": "https://basedtraders.onrender.com/api/webhook",
     "license": "MIT",
     "privacyPolicyUrl": "https://basetraders.vercel.app/",
     "tags": [
@@ -36,7 +36,7 @@
       "https://basetraders.vercel.app/screenshot2.png"
     ],
     "noindex": false,
-    "primaryCategory": "productivity"
+    "primaryCategory": "game"
   },
   "baseBuilder": {
     "ownerAddress": "0x126D089D2E260C1188f304DeFe39B9d96a47A17A"

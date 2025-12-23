@@ -686,6 +686,13 @@ app.get('/health', (req, res) => {
   })
 })
 
+// Farcaster Mini App webhook endpoint
+app.post('/api/webhook', (req, res) => {
+  console.log('📥 Farcaster webhook received:', req.body)
+  // Acknowledge the webhook
+  res.json({ success: true })
+})
+
 // API Routes
 app.get('/api/price', async (req, res) => {
   try {
