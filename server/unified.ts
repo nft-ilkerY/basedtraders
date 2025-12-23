@@ -58,63 +58,75 @@ async function generateShareImageCanvas(token: string, leverage: string, profit:
   ctx.arc(250, 525, 250, 0, Math.PI * 2)
   ctx.fill()
 
-  // Load and draw menulogo
-  try {
-    const logoPath = path.join(__dirname, '..', 'public', 'menulogo.png')
-    const logo = await loadImage(logoPath)
-    ctx.drawImage(logo, 50, 50, 180, 180)
-  } catch (error) {
-    console.error('Failed to load menulogo.png:', error)
-  }
+  // Title - "BasedTraders" centered at top
+  ctx.textAlign = 'center'
+  ctx.font = 'bold 70px Arial'
 
-  // Title
-  ctx.fillStyle = '#22c55e'
-  ctx.font = 'bold 55px Arial'
+  // "Based" in blue (logo background color)
+  ctx.fillStyle = '#0000FF'
+  const basedText = 'Based'
+  const tradersText = 'Traders'
+
+  // Measure text widths to position them side by side
+  const basedWidth = ctx.measureText(basedText).width
+  const tradersWidth = ctx.measureText(tradersText).width
+  const totalWidth = basedWidth + tradersWidth
+
+  // Center the combined text
+  const startX = (1200 - totalWidth) / 2
+
   ctx.textAlign = 'left'
-  ctx.fillText('Profitable Trade!', 260, 140)
+  ctx.fillText(basedText, startX, 100)
 
-  // Stats background
+  // "Traders" in white
+  ctx.fillStyle = '#ffffff'
+  ctx.fillText(tradersText, startX + basedWidth, 100)
+
+  // Stats background - centered
   ctx.fillStyle = 'rgba(10, 12, 18, 0.7)'
   ctx.beginPath()
-  ctx.roundRect(50, 270, 1100, 350, 20)
+  ctx.roundRect(300, 180, 600, 440, 20)
   ctx.fill()
 
-  // Stats in a horizontal layout
-  const statsY = 370
-  const gap = 275
+  // Stats in a vertical layout (alt alta) - all centered
+  ctx.textAlign = 'center'
+  const centerX = 600
+  let currentY = 260
 
   // Token
   ctx.fillStyle = '#9ca3af'
   ctx.font = '28px Arial'
-  ctx.textAlign = 'center'
-  ctx.fillText('Token', 120 + gap * 0, statsY - 30)
+  ctx.fillText('Token', centerX, currentY)
   ctx.fillStyle = '#ffffff'
-  ctx.font = 'bold 40px Arial'
-  ctx.fillText(token, 120 + gap * 0, statsY + 20)
+  ctx.font = 'bold 45px Arial'
+  ctx.fillText(token, centerX, currentY + 50)
+  currentY += 120
 
   // Leverage
   ctx.fillStyle = '#9ca3af'
   ctx.font = '28px Arial'
-  ctx.fillText('Leverage', 120 + gap * 1, statsY - 30)
+  ctx.fillText('Leverage', centerX, currentY)
   ctx.fillStyle = '#0000FF'
-  ctx.font = 'bold 40px Arial'
-  ctx.fillText(`${leverage}x`, 120 + gap * 1, statsY + 20)
+  ctx.font = 'bold 45px Arial'
+  ctx.fillText(`${leverage}x`, centerX, currentY + 50)
+  currentY += 120
 
   // Profit
   ctx.fillStyle = '#9ca3af'
   ctx.font = '28px Arial'
-  ctx.fillText('Profit', 120 + gap * 2, statsY - 30)
+  ctx.fillText('Profit', centerX, currentY)
   ctx.fillStyle = '#22c55e'
-  ctx.font = 'bold 40px Arial'
-  ctx.fillText(`+$${profit}`, 120 + gap * 2, statsY + 20)
+  ctx.font = 'bold 45px Arial'
+  ctx.fillText(`+$${profit}`, centerX, currentY + 50)
+  currentY += 120
 
   // Return
   ctx.fillStyle = '#9ca3af'
   ctx.font = '28px Arial'
-  ctx.fillText('Return', 120 + gap * 3, statsY - 30)
+  ctx.fillText('Return', centerX, currentY)
   ctx.fillStyle = '#22c55e'
-  ctx.font = 'bold 40px Arial'
-  ctx.fillText(`+${profitPercent}%`, 120 + gap * 3, statsY + 20)
+  ctx.font = 'bold 45px Arial'
+  ctx.fillText(`+${profitPercent}%`, centerX, currentY + 50)
 
   return canvas
 }
