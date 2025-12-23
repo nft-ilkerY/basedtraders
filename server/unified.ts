@@ -87,57 +87,57 @@ async function generateShareImageCanvas(
     ctx.fillStyle = '#ffffff'
     ctx.fillText(tradersText, startX + basedWidth, 150)
 
-    // Stats background - centered
-    ctx.fillStyle = 'rgba(10, 12, 18, 0.7)'
+    // Stats background - centered, larger box
+    ctx.fillStyle = 'rgba(10, 12, 18, 0.8)'
     ctx.beginPath()
-    ctx.roundRect(250, 250, 700, 520, 20)
+    ctx.roundRect(150, 230, 900, 680, 25)
     ctx.fill()
 
     // Stats in vertical layout - all centered
     ctx.textAlign = 'center'
     const centerX = 600
-    let currentY = 330
+    let currentY = 340
 
     // Token
     ctx.fillStyle = '#9ca3af'
-    ctx.font = '36px Arial'
+    ctx.font = '44px Arial'
     ctx.fillText('Token', centerX, currentY)
     ctx.fillStyle = '#ffffff'
-    ctx.font = 'bold 62px Arial'
-    ctx.fillText(token, centerX, currentY + 60)
-    currentY += 140
+    ctx.font = 'bold 80px Arial'
+    ctx.fillText(token, centerX, currentY + 70)
+    currentY += 160
 
     // Leverage
     ctx.fillStyle = '#9ca3af'
-    ctx.font = '36px Arial'
+    ctx.font = '44px Arial'
     ctx.fillText('Leverage', centerX, currentY)
     ctx.fillStyle = '#0000FF'
-    ctx.font = 'bold 62px Arial'
-    ctx.fillText(`${leverage}x`, centerX, currentY + 60)
-    currentY += 140
+    ctx.font = 'bold 80px Arial'
+    ctx.fillText(`${leverage}x`, centerX, currentY + 70)
+    currentY += 160
 
     // Profit
     ctx.fillStyle = '#9ca3af'
-    ctx.font = '36px Arial'
+    ctx.font = '44px Arial'
     ctx.fillText('Profit', centerX, currentY)
     ctx.fillStyle = '#22c55e'
-    ctx.font = 'bold 62px Arial'
-    ctx.fillText(`+$${profit}`, centerX, currentY + 60)
-    currentY += 140
+    ctx.font = 'bold 80px Arial'
+    ctx.fillText(`+$${profit}`, centerX, currentY + 70)
+    currentY += 160
 
     // Return
     ctx.fillStyle = '#9ca3af'
-    ctx.font = '36px Arial'
+    ctx.font = '44px Arial'
     ctx.fillText('Return', centerX, currentY)
     ctx.fillStyle = '#22c55e'
-    ctx.font = 'bold 62px Arial'
-    ctx.fillText(`+${profitPercent}%`, centerX, currentY + 60)
+    ctx.font = 'bold 80px Arial'
+    ctx.fillText(`+${profitPercent}%`, centerX, currentY + 70)
 
     // Load and draw menulogo at bottom center
     try {
       const logoPath = path.join(__dirname, '..', 'public', 'menulogo.png')
       const logo = await loadImage(logoPath)
-      ctx.drawImage(logo, 525, 850, 150, 150)
+      ctx.drawImage(logo, 525, 960, 150, 150)
     } catch (error) {
       console.error('Failed to load menulogo.png:', error)
     }
