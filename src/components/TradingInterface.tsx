@@ -633,7 +633,7 @@ export default function TradingInterface({ profile, isLoggedIn }: TradingInterfa
                     onClick={async () => {
                       try {
                         setIsGeneratingImage(true)
-                        // Create share image and get static PNG URL
+                        // Create share image with square format for Farcaster
                         const response = await fetch('https://basedtraders.onrender.com/api/create-share-image', {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
@@ -641,7 +641,8 @@ export default function TradingInterface({ profile, isLoggedIn }: TradingInterfa
                             token: shareModal.token,
                             leverage: shareModal.leverage,
                             profit: shareModal.profit.toFixed(2),
-                            profitPercent: shareModal.profitPercent.toFixed(2)
+                            profitPercent: shareModal.profitPercent.toFixed(2),
+                            format: 'square'
                           })
                         })
 
@@ -707,7 +708,7 @@ export default function TradingInterface({ profile, isLoggedIn }: TradingInterfa
                     </button>
                     <button
                       onClick={() => {
-                        const sharePageUrl = `https://basedtraders.onrender.com/api/share-image?token=${encodeURIComponent(shareModal.token)}&leverage=${shareModal.leverage}&profit=${shareModal.profit.toFixed(2)}&profitPercent=${shareModal.profitPercent.toFixed(2)}`
+                        const sharePageUrl = `https://basedtraders.onrender.com/api/share-image?token=${encodeURIComponent(shareModal.token)}&leverage=${shareModal.leverage}&profit=${shareModal.profit.toFixed(2)}&profitPercent=${shareModal.profitPercent.toFixed(2)}&format=wide`
                         const tweetText = `I just closed a ${shareModal.leverage}x ${shareModal.token} position with $${shareModal.profit.toFixed(2)} profit (+${shareModal.profitPercent.toFixed(1)}%) on @basedtradersapp (game 🎮)`
                         const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent(sharePageUrl)}`
                         window.open(tweetUrl, '_blank')

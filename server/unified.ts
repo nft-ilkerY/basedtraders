@@ -32,113 +32,216 @@ if (!fs.existsSync(SHARES_DIR)) {
   console.log('📁 Created shares directory:', SHARES_DIR)
 }
 
-// Generate hash for share image (deterministic based on trade data)
-function generateImageHash(token: string, leverage: string, profit: string, profitPercent: string): string {
-  const data = `${token}-${leverage}-${profit}-${profitPercent}`
+// Generate hash for share image (deterministic based on trade data and format)
+function generateImageHash(token: string, leverage: string, profit: string, profitPercent: string, format: string = 'wide'): string {
+  const data = `${token}-${leverage}-${profit}-${profitPercent}-${format}`
   return crypto.createHash('md5').update(data).digest('hex')
 }
 
-// Generate share image canvas (16:9 format 1200x675)
-async function generateShareImageCanvas(token: string, leverage: string, profit: string, profitPercent: string) {
-  const canvas = createCanvas(1200, 675)
-  const ctx = canvas.getContext('2d')
+// Generate share image canvas with format support (square or wide)
+async function generateShareImageCanvas(
+  token: string,
+  leverage: string,
+  profit: string,
+  profitPercent: string,
+  format: 'square' | 'wide' = 'wide'
+) {
+  if (format === 'square') {
+    // Square format 1200x1200 for Farcaster
+    const canvas = createCanvas(1200, 1200)
+    const ctx = canvas.getContext('2d')
 
-  // Background
-  ctx.fillStyle = '#0f1117'
-  ctx.fillRect(0, 0, 1200, 675)
+    // Background
+    ctx.fillStyle = '#0f1117'
+    ctx.fillRect(0, 0, 1200, 1200)
 
-  // Add decorative circles
-  ctx.fillStyle = 'rgba(0, 0, 255, 0.15)'
-  ctx.beginPath()
-  ctx.arc(950, 150, 250, 0, Math.PI * 2)
-  ctx.fill()
+    // Add decorative circles
+    ctx.fillStyle = 'rgba(0, 0, 255, 0.15)'
+    ctx.beginPath()
+    ctx.arc(950, 200, 300, 0, Math.PI * 2)
+    ctx.fill()
 
-  ctx.fillStyle = 'rgba(34, 197, 94, 0.15)'
-  ctx.beginPath()
-  ctx.arc(250, 525, 250, 0, Math.PI * 2)
-  ctx.fill()
+    ctx.fillStyle = 'rgba(34, 197, 94, 0.15)'
+    ctx.beginPath()
+    ctx.arc(250, 1000, 300, 0, Math.PI * 2)
+    ctx.fill()
 
-  // Title - "BasedTraders" centered at top
-  ctx.textAlign = 'center'
-  ctx.font = 'bold 70px Arial'
+    // Title - "BasedTraders" centered at top
+    ctx.textAlign = 'center'
+    ctx.font = 'bold 70px Arial'
 
-  // "Based" in blue (logo background color)
-  ctx.fillStyle = '#0000FF'
-  const basedText = 'Based'
-  const tradersText = 'Traders'
+    // "Based" in blue
+    ctx.fillStyle = '#0000FF'
+    const basedText = 'Based'
+    const tradersText = 'Traders'
 
-  // Measure text widths to position them side by side
-  const basedWidth = ctx.measureText(basedText).width
-  const tradersWidth = ctx.measureText(tradersText).width
-  const totalWidth = basedWidth + tradersWidth
+    const basedWidth = ctx.measureText(basedText).width
+    const tradersWidth = ctx.measureText(tradersText).width
+    const totalWidth = basedWidth + tradersWidth
+    const startX = (1200 - totalWidth) / 2
 
-  // Center the combined text
-  const startX = (1200 - totalWidth) / 2
+    ctx.textAlign = 'left'
+    ctx.fillText(basedText, startX, 150)
 
-  ctx.textAlign = 'left'
-  ctx.fillText(basedText, startX, 100)
+    // "Traders" in white
+    ctx.fillStyle = '#ffffff'
+    ctx.fillText(tradersText, startX + basedWidth, 150)
 
-  // "Traders" in white
-  ctx.fillStyle = '#ffffff'
-  ctx.fillText(tradersText, startX + basedWidth, 100)
+    // Stats background - centered
+    ctx.fillStyle = 'rgba(10, 12, 18, 0.7)'
+    ctx.beginPath()
+    ctx.roundRect(250, 250, 700, 520, 20)
+    ctx.fill()
 
-  // Stats background - centered
-  ctx.fillStyle = 'rgba(10, 12, 18, 0.7)'
-  ctx.beginPath()
-  ctx.roundRect(150, 180, 900, 320, 20)
-  ctx.fill()
+    // Stats in vertical layout - all centered
+    ctx.textAlign = 'center'
+    const centerX = 600
+    let currentY = 340
 
-  // Stats in 2x2 grid layout - all centered
-  ctx.textAlign = 'center'
-  const leftColX = 375
-  const rightColX = 825
-  const firstRowY = 270
-  const secondRowY = 410
+    // Token
+    ctx.fillStyle = '#9ca3af'
+    ctx.font = '28px Arial'
+    ctx.fillText('Token', centerX, currentY)
+    ctx.fillStyle = '#ffffff'
+    ctx.font = 'bold 45px Arial'
+    ctx.fillText(token, centerX, currentY + 50)
+    currentY += 130
 
-  // First Row: Token and Leverage
-  // Token
-  ctx.fillStyle = '#9ca3af'
-  ctx.font = '28px Arial'
-  ctx.fillText('Token', leftColX, firstRowY)
-  ctx.fillStyle = '#ffffff'
-  ctx.font = 'bold 45px Arial'
-  ctx.fillText(token, leftColX, firstRowY + 50)
+    // Leverage
+    ctx.fillStyle = '#9ca3af'
+    ctx.font = '28px Arial'
+    ctx.fillText('Leverage', centerX, currentY)
+    ctx.fillStyle = '#0000FF'
+    ctx.font = 'bold 45px Arial'
+    ctx.fillText(`${leverage}x`, centerX, currentY + 50)
+    currentY += 130
 
-  // Leverage
-  ctx.fillStyle = '#9ca3af'
-  ctx.font = '28px Arial'
-  ctx.fillText('Leverage', rightColX, firstRowY)
-  ctx.fillStyle = '#0000FF'
-  ctx.font = 'bold 45px Arial'
-  ctx.fillText(`${leverage}x`, rightColX, firstRowY + 50)
+    // Profit
+    ctx.fillStyle = '#9ca3af'
+    ctx.font = '28px Arial'
+    ctx.fillText('Profit', centerX, currentY)
+    ctx.fillStyle = '#22c55e'
+    ctx.font = 'bold 45px Arial'
+    ctx.fillText(`+$${profit}`, centerX, currentY + 50)
+    currentY += 130
 
-  // Second Row: Profit and Return
-  // Profit
-  ctx.fillStyle = '#9ca3af'
-  ctx.font = '28px Arial'
-  ctx.fillText('Profit', leftColX, secondRowY)
-  ctx.fillStyle = '#22c55e'
-  ctx.font = 'bold 45px Arial'
-  ctx.fillText(`+$${profit}`, leftColX, secondRowY + 50)
+    // Return
+    ctx.fillStyle = '#9ca3af'
+    ctx.font = '28px Arial'
+    ctx.fillText('Return', centerX, currentY)
+    ctx.fillStyle = '#22c55e'
+    ctx.font = 'bold 45px Arial'
+    ctx.fillText(`+${profitPercent}%`, centerX, currentY + 50)
 
-  // Return
-  ctx.fillStyle = '#9ca3af'
-  ctx.font = '28px Arial'
-  ctx.fillText('Return', rightColX, secondRowY)
-  ctx.fillStyle = '#22c55e'
-  ctx.font = 'bold 45px Arial'
-  ctx.fillText(`+${profitPercent}%`, rightColX, secondRowY + 50)
+    // Load and draw menulogo at bottom center
+    try {
+      const logoPath = path.join(__dirname, '..', 'public', 'menulogo.png')
+      const logo = await loadImage(logoPath)
+      ctx.drawImage(logo, 525, 850, 150, 150)
+    } catch (error) {
+      console.error('Failed to load menulogo.png:', error)
+    }
 
-  // Load and draw menulogo at bottom right
-  try {
-    const logoPath = path.join(__dirname, '..', 'public', 'menulogo.png')
-    const logo = await loadImage(logoPath)
-    ctx.drawImage(logo, 1020, 495, 150, 150)
-  } catch (error) {
-    console.error('Failed to load menulogo.png:', error)
+    return canvas
+  } else {
+    // Wide format 1200x675 for Twitter (16:9)
+    const canvas = createCanvas(1200, 675)
+    const ctx = canvas.getContext('2d')
+
+    // Background
+    ctx.fillStyle = '#0f1117'
+    ctx.fillRect(0, 0, 1200, 675)
+
+    // Add decorative circles
+    ctx.fillStyle = 'rgba(0, 0, 255, 0.15)'
+    ctx.beginPath()
+    ctx.arc(950, 150, 250, 0, Math.PI * 2)
+    ctx.fill()
+
+    ctx.fillStyle = 'rgba(34, 197, 94, 0.15)'
+    ctx.beginPath()
+    ctx.arc(250, 525, 250, 0, Math.PI * 2)
+    ctx.fill()
+
+    // Title - "BasedTraders" centered at top
+    ctx.textAlign = 'center'
+    ctx.font = 'bold 70px Arial'
+
+    // "Based" in blue
+    ctx.fillStyle = '#0000FF'
+    const basedText = 'Based'
+    const tradersText = 'Traders'
+
+    const basedWidth = ctx.measureText(basedText).width
+    const tradersWidth = ctx.measureText(tradersText).width
+    const totalWidth = basedWidth + tradersWidth
+    const startX = (1200 - totalWidth) / 2
+
+    ctx.textAlign = 'left'
+    ctx.fillText(basedText, startX, 100)
+
+    // "Traders" in white
+    ctx.fillStyle = '#ffffff'
+    ctx.fillText(tradersText, startX + basedWidth, 100)
+
+    // Stats background - centered
+    ctx.fillStyle = 'rgba(10, 12, 18, 0.7)'
+    ctx.beginPath()
+    ctx.roundRect(150, 180, 900, 320, 20)
+    ctx.fill()
+
+    // Stats in 2x2 grid layout - all centered
+    ctx.textAlign = 'center'
+    const leftColX = 375
+    const rightColX = 825
+    const firstRowY = 270
+    const secondRowY = 410
+
+    // First Row: Token and Leverage
+    // Token
+    ctx.fillStyle = '#9ca3af'
+    ctx.font = '28px Arial'
+    ctx.fillText('Token', leftColX, firstRowY)
+    ctx.fillStyle = '#ffffff'
+    ctx.font = 'bold 45px Arial'
+    ctx.fillText(token, leftColX, firstRowY + 50)
+
+    // Leverage
+    ctx.fillStyle = '#9ca3af'
+    ctx.font = '28px Arial'
+    ctx.fillText('Leverage', rightColX, firstRowY)
+    ctx.fillStyle = '#0000FF'
+    ctx.font = 'bold 45px Arial'
+    ctx.fillText(`${leverage}x`, rightColX, firstRowY + 50)
+
+    // Second Row: Profit and Return
+    // Profit
+    ctx.fillStyle = '#9ca3af'
+    ctx.font = '28px Arial'
+    ctx.fillText('Profit', leftColX, secondRowY)
+    ctx.fillStyle = '#22c55e'
+    ctx.font = 'bold 45px Arial'
+    ctx.fillText(`+$${profit}`, leftColX, secondRowY + 50)
+
+    // Return
+    ctx.fillStyle = '#9ca3af'
+    ctx.font = '28px Arial'
+    ctx.fillText('Return', rightColX, secondRowY)
+    ctx.fillStyle = '#22c55e'
+    ctx.font = 'bold 45px Arial'
+    ctx.fillText(`+${profitPercent}%`, rightColX, secondRowY + 50)
+
+    // Load and draw menulogo at bottom right
+    try {
+      const logoPath = path.join(__dirname, '..', 'public', 'menulogo.png')
+      const logo = await loadImage(logoPath)
+      ctx.drawImage(logo, 1020, 495, 150, 150)
+    } catch (error) {
+      console.error('Failed to load menulogo.png:', error)
+    }
+
+    return canvas
   }
-
-  return canvas
 }
 
 // Clean up old share images (delete files older than 1 hour)
@@ -1821,15 +1924,17 @@ app.get('/api/share-image', async (req, res) => {
   const leverage = req.query.leverage as string || '1'
   const profit = req.query.profit as string || '0'
   const profitPercent = req.query.profitPercent as string || '0'
+  const format = (req.query.format as string || 'wide') as 'square' | 'wide'
 
-  console.log('🔗 [SHARE] HTML page requested for:', { token, leverage, profit, profitPercent })
+  console.log('🔗 [SHARE] HTML page requested for:', { token, leverage, profit, profitPercent, format })
 
-  // Generate image filename hash (same as POST endpoint)
+  // Generate image filename hash (includes format)
   const imageHash = generateImageHash(
     token,
     leverage,
     profit,
-    profitPercent
+    profitPercent,
+    format
   )
   const filename = `share-${imageHash}.png`
 
@@ -1845,8 +1950,8 @@ app.get('/api/share-image', async (req, res) => {
   if (!existingFile || existingFile.length === 0) {
     console.log('⚠️ [SHARE] Image not found, creating it first...')
 
-    // Create 16:9 canvas using helper function
-    const canvas = await generateShareImageCanvas(token, leverage, profit, profitPercent)
+    // Create canvas using helper function with format
+    const canvas = await generateShareImageCanvas(token, leverage, profit, profitPercent, format)
 
     // Convert to buffer
     const buffer = canvas.toBuffer('image/png')
@@ -1879,6 +1984,11 @@ app.get('/api/share-image', async (req, res) => {
 
   console.log('🖼️ [SHARE] Image URL:', imageUrl)
 
+  // Determine dimensions based on format
+  const aspectRatio = format === 'square' ? '1:1' : '1.91:1'
+  const imageWidth = 1200
+  const imageHeight = format === 'square' ? 1200 : 675
+
   const html = `<!DOCTYPE html>
 <html>
 <head>
@@ -1895,7 +2005,7 @@ app.get('/api/share-image', async (req, res) => {
   <!-- Farcaster Frame (fallback) -->
   <meta property="fc:frame" content="vNext" />
   <meta property="fc:frame:image" content="${imageUrl}" />
-  <meta property="fc:frame:image:aspect_ratio" content="1.91:1" />
+  <meta property="fc:frame:image:aspect_ratio" content="${aspectRatio}" />
   <meta property="fc:frame:button:1" content="Play Now" />
   <meta property="fc:frame:button:1:action" content="link" />
   <meta property="fc:frame:button:1:target" content="${miniappUrl}" />
@@ -1904,8 +2014,8 @@ app.get('/api/share-image', async (req, res) => {
   <meta property="og:title" content="Profitable Trade on Based Traders!" />
   <meta property="og:description" content="${leverage}x ${token} position closed with +$${profit} profit (+${profitPercent}%)" />
   <meta property="og:image" content="${imageUrl}" />
-  <meta property="og:image:width" content="1200" />
-  <meta property="og:image:height" content="675" />
+  <meta property="og:image:width" content="${imageWidth}" />
+  <meta property="og:image:height" content="${imageHeight}" />
   <meta property="og:url" content="${miniappUrl}" />
 
   <!-- Twitter Card -->
@@ -1936,16 +2046,18 @@ app.get('/api/share-image', async (req, res) => {
 // Share image creation endpoint - POST to create image, returns static URL
 app.post('/api/create-share-image', async (req, res) => {
   try {
-    const { token, leverage, profit, profitPercent } = req.body
+    const { token, leverage, profit, profitPercent, format } = req.body
+    const imageFormat = (format || 'wide') as 'square' | 'wide'
 
-    console.log('🎨 Creating share image for:', { token, leverage, profit, profitPercent })
+    console.log('🎨 Creating share image for:', { token, leverage, profit, profitPercent, format: imageFormat })
 
-    // Generate unique filename
+    // Generate unique filename (includes format)
     const imageHash = generateImageHash(
       token || 'BATR',
       (leverage || 1).toString(),
       (profit || 0).toString(),
-      (profitPercent || 0).toString()
+      (profitPercent || 0).toString(),
+      imageFormat
     )
     const filename = `share-${imageHash}.png`
 
@@ -1969,12 +2081,13 @@ app.post('/api/create-share-image', async (req, res) => {
       })
     }
 
-    // Create 16:9 canvas using helper function
+    // Create canvas using helper function with format
     const canvas = await generateShareImageCanvas(
       token || 'BATR',
       (leverage || 1).toString(),
       (profit || 0).toString(),
-      (profitPercent || 0).toString()
+      (profitPercent || 0).toString(),
+      imageFormat
     )
 
     // Convert to buffer
