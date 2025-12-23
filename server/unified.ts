@@ -85,48 +85,58 @@ async function generateShareImageCanvas(token: string, leverage: string, profit:
   // Stats background - centered
   ctx.fillStyle = 'rgba(10, 12, 18, 0.7)'
   ctx.beginPath()
-  ctx.roundRect(300, 180, 600, 440, 20)
+  ctx.roundRect(150, 180, 900, 320, 20)
   ctx.fill()
 
-  // Stats in a vertical layout (alt alta) - all centered
+  // Stats in 2x2 grid layout - all centered
   ctx.textAlign = 'center'
-  const centerX = 600
-  let currentY = 260
+  const leftColX = 375
+  const rightColX = 825
+  const firstRowY = 270
+  const secondRowY = 410
 
+  // First Row: Token and Leverage
   // Token
   ctx.fillStyle = '#9ca3af'
   ctx.font = '28px Arial'
-  ctx.fillText('Token', centerX, currentY)
+  ctx.fillText('Token', leftColX, firstRowY)
   ctx.fillStyle = '#ffffff'
   ctx.font = 'bold 45px Arial'
-  ctx.fillText(token, centerX, currentY + 50)
-  currentY += 120
+  ctx.fillText(token, leftColX, firstRowY + 50)
 
   // Leverage
   ctx.fillStyle = '#9ca3af'
   ctx.font = '28px Arial'
-  ctx.fillText('Leverage', centerX, currentY)
+  ctx.fillText('Leverage', rightColX, firstRowY)
   ctx.fillStyle = '#0000FF'
   ctx.font = 'bold 45px Arial'
-  ctx.fillText(`${leverage}x`, centerX, currentY + 50)
-  currentY += 120
+  ctx.fillText(`${leverage}x`, rightColX, firstRowY + 50)
 
+  // Second Row: Profit and Return
   // Profit
   ctx.fillStyle = '#9ca3af'
   ctx.font = '28px Arial'
-  ctx.fillText('Profit', centerX, currentY)
+  ctx.fillText('Profit', leftColX, secondRowY)
   ctx.fillStyle = '#22c55e'
   ctx.font = 'bold 45px Arial'
-  ctx.fillText(`+$${profit}`, centerX, currentY + 50)
-  currentY += 120
+  ctx.fillText(`+$${profit}`, leftColX, secondRowY + 50)
 
   // Return
   ctx.fillStyle = '#9ca3af'
   ctx.font = '28px Arial'
-  ctx.fillText('Return', centerX, currentY)
+  ctx.fillText('Return', rightColX, secondRowY)
   ctx.fillStyle = '#22c55e'
   ctx.font = 'bold 45px Arial'
-  ctx.fillText(`+${profitPercent}%`, centerX, currentY + 50)
+  ctx.fillText(`+${profitPercent}%`, rightColX, secondRowY + 50)
+
+  // Load and draw menulogo at bottom right
+  try {
+    const logoPath = path.join(__dirname, '..', 'public', 'menulogo.png')
+    const logo = await loadImage(logoPath)
+    ctx.drawImage(logo, 1020, 495, 150, 150)
+  } catch (error) {
+    console.error('Failed to load menulogo.png:', error)
+  }
 
   return canvas
 }
