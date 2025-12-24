@@ -774,6 +774,7 @@ export default function AdminPanel({ fid }: AdminPanelProps) {
               </div>
             </div>
           </div>
+          </div>
         )}
 
         {/* Reset Tab */}
