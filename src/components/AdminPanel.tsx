@@ -359,7 +359,7 @@ export default function AdminPanel({ fid }: AdminPanelProps) {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2 mb-6 overflow-x-auto">
+        <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
           <button
             onClick={() => setActiveTab('tokens')}
             className={`px-6 py-3 rounded-xl font-semibold transition-all whitespace-nowrap ${
