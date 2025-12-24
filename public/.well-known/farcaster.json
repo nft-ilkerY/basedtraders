@@ -29,14 +29,15 @@
       "leverage",
       "base",
       "defi",
-      "crypto"
+      "crypto",
+      "game"
     ],
     "screenshotUrls": [
       "https://basetraders.vercel.app/screenshot1.png",
       "https://basetraders.vercel.app/screenshot2.png"
     ],
     "noindex": false,
-    "primaryCategory": "game"
+    "primaryCategory": "games"
   },
   "baseBuilder": {
     "ownerAddress": "0x126D089D2E260C1188f304DeFe39B9d96a47A17A"
