@@ -8,7 +8,7 @@ export default function FarcasterAuth() {
       onClick={handleClick}
       className="bg-[#8a63d2] hover:bg-[#7a53c2] text-white font-semibold py-2 px-4 rounded-xl transition-colors"
     >
-      Go Farcaster
+      Sign In
     </button>
   )
 }

@@ -113,7 +113,7 @@ export default function TradingInterface({ profile, isLoggedIn }: TradingInterfa
     }
   }, [selectedToken])
 
-  // Initialize player when Farcaster connects
+  // Initialize player when user connects
   useEffect(() => {
     if (isLoggedIn && profile?.fid) {
       console.log('🔄 [TradingInterface] Player login detected, FID:', profile.fid)
@@ -231,7 +231,7 @@ export default function TradingInterface({ profile, isLoggedIn }: TradingInterfa
                 Welcome to <span className="bg-gradient-to-r from-[#0000FF] to-[#4444FF] bg-clip-text text-transparent">Based</span> Traders
               </h2>
               <p className="text-gray-300 text-sm sm:text-base md:text-lg mb-6 sm:mb-10 max-w-xl mx-auto px-2">
-                Sign in with Farcaster to start trading with leverage. Get <span className="text-[#0000FF] font-bold">$1,000</span> virtual cash to trade with!
+                Sign In to start trading with leverage. Get <span className="text-[#0000FF] font-bold">$1,000</span> virtual cash to trade with!
               </p>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
                 <div className="bg-[#0a0c12]/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-700/50 hover:border-[#0000FF]/50 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-[#0000FF]/20">

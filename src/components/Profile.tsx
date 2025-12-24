@@ -218,9 +218,9 @@ export default function Profile({ profile, isLoggedIn }: ProfileProps) {
               <div className="w-20 h-20 bg-gradient-to-br from-[#0000FF] to-[#0000AA] rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-[#0000FF]/30">
                 <span className="text-4xl">👤</span>
               </div>
-              <h2 className="text-4xl font-bold mb-4">Sign in with Farcaster</h2>
+              <h2 className="text-4xl font-bold mb-4">Sign In</h2>
               <p className="text-gray-300 text-lg mb-8">
-                Sign in with Farcaster to view your profile and trading statistics
+                Sign In to view your profile and trading statistics
               </p>
             </div>
           </div>
