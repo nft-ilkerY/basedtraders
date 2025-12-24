@@ -354,7 +354,7 @@ export default function AdminPanel({ fid }: AdminPanelProps) {
           <div className="absolute top-0 right-0 w-96 h-96 bg-[#0000FF] opacity-[0.08] rounded-full blur-3xl pointer-events-none"></div>
           <div className="relative z-10">
             <h1 className="text-4xl font-bold mb-2">Admin Panel</h1>
-            <p className="text-gray-400">Manage tokens, fees, and system configuration</p>
+            <p className="text-gray-400">Manage tokens, fees, players, and system configuration</p>
           </div>
         </div>
 
