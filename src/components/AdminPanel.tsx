@@ -40,6 +40,10 @@ export default function AdminPanel({ fid }: AdminPanelProps) {
   const [affectedPlayers, setAffectedPlayers] = useState(0)
   const [isApplying, setIsApplying] = useState(false)
 
+  // Player reset
+  const [resetUsername, setResetUsername] = useState('')
+  const [isResetting, setIsResetting] = useState(false)
+
   useEffect(() => {
     loadData()
   }, [])
@@ -292,6 +296,45 @@ export default function AdminPanel({ fid }: AdminPanelProps) {
       alert('Error updating balances')
     } finally {
       setIsApplying(false)
+    }
+  }
+
+  const handleResetPlayer = async () => {
+    if (!resetUsername.trim()) {
+      alert('Please enter a username or FID')
+      return
+    }
+
+    if (!confirm(`⚠️ WARNING: This will PERMANENTLY reset all data for player "${resetUsername}":\n\n• All positions (open & closed) will be deleted\n• Trading stats will be reset to 0\n• Balance will be reset to $1,000\n• P&L history will be erased\n\nThis action CANNOT be undone!\n\nAre you sure you want to continue?`)) {
+      return
+    }
+
+    setIsResetting(true)
+    try {
+      const response = await fetch('https://basedtraders.onrender.com/api/admin/players/reset', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-fid': fid.toString()
+        },
+        body: JSON.stringify({
+          username: resetUsername.trim()
+        })
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        alert(`✅ Successfully reset player "${resetUsername}"!\n\nReset statistics:\n• Positions deleted: ${data.positions_deleted || 0}\n• Balance reset to: $${data.new_balance || 1000}\n• All stats cleared`)
+        setResetUsername('')
+      } else {
+        alert(`❌ Error: ${data.error || 'Failed to reset player'}`)
+      }
+    } catch (error) {
+      console.error('Error resetting player:', error)
+      alert('❌ Network error. Please try again.')
+    } finally {
+      setIsResetting(false)
     }
   }
 
@@ -629,16 +672,82 @@ export default function AdminPanel({ fid }: AdminPanelProps) {
 
         {/* Players Tab */}
         {activeTab === 'players' && (
-          <div className="bg-gradient-to-br from-[#0f1117] to-[#0a0c12] rounded-3xl p-6 border border-gray-700/50">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 bg-gradient-to-br from-[#0000FF] to-[#0000AA] rounded-2xl flex items-center justify-center">
-                <span className="text-2xl">💰</span>
+          <div className="space-y-6">
+            {/* Reset Player Section */}
+            <div className="bg-gradient-to-br from-[#0f1117] to-[#0a0c12] rounded-3xl p-6 border border-gray-700/50">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-red-700 rounded-2xl flex items-center justify-center">
+                  <span className="text-2xl">🔄</span>
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold">Reset Player</h3>
+                  <p className="text-gray-400 text-sm">Completely reset a player's account and trading history</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-2xl font-bold">Bulk Balance Update</h3>
-                <p className="text-gray-400 text-sm">Add balance to players below a certain threshold</p>
+
+              <div className="space-y-6">
+                {/* Username Input */}
+                <div className="bg-[#0a0c12] rounded-xl p-6 border border-gray-700/50">
+                  <label className="block mb-3">
+                    <div className="font-semibold text-white mb-1">Username or FID</div>
+                    <div className="text-sm text-gray-400 mb-3">
+                      Enter the Farcaster username (e.g., "ilker") or FID number
+                    </div>
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">👤</span>
+                    <input
+                      type="text"
+                      placeholder="e.g., ilker or 12345"
+                      value={resetUsername}
+                      onChange={(e) => setResetUsername(e.target.value)}
+                      className="flex-1 bg-[#090a0f] border border-gray-700 rounded-lg px-4 py-3 text-white text-lg"
+                    />
+                  </div>
+                </div>
+
+                {/* Reset Button */}
+                <button
+                  onClick={handleResetPlayer}
+                  disabled={isResetting || !resetUsername.trim()}
+                  className="w-full bg-gradient-to-r from-red-500 to-red-700 hover:from-red-600 hover:to-red-800 disabled:from-gray-700 disabled:to-gray-700 disabled:cursor-not-allowed text-white font-bold py-4 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 disabled:transform-none shadow-lg shadow-red-500/50 disabled:shadow-none"
+                >
+                  {isResetting ? 'Resetting Player...' : 'Reset Player Account'}
+                </button>
+
+                {/* Danger Warning */}
+                <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
+                  <div className="flex items-start gap-3">
+                    <span className="text-2xl">⚠️</span>
+                    <div>
+                      <div className="font-semibold text-red-400 mb-1">DANGER ZONE</div>
+                      <div className="text-sm text-gray-300">
+                        This will <strong>permanently delete</strong> all player data including:
+                        <ul className="list-disc list-inside mt-2 space-y-1">
+                          <li>All open and closed positions</li>
+                          <li>Trading history and statistics</li>
+                          <li>Total volume, P&L, win rate</li>
+                          <li>Balance will be reset to $1,000</li>
+                        </ul>
+                        <strong className="block mt-2 text-red-400">This action CANNOT be undone!</strong>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
+
+            {/* Bulk Balance Update Section */}
+            <div className="bg-gradient-to-br from-[#0f1117] to-[#0a0c12] rounded-3xl p-6 border border-gray-700/50">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-gradient-to-br from-[#0000FF] to-[#0000AA] rounded-2xl flex items-center justify-center">
+                  <span className="text-2xl">💰</span>
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold">Bulk Balance Update</h3>
+                  <p className="text-gray-400 text-sm">Add balance to players below a certain threshold</p>
+                </div>
+              </div>
 
             <div className="space-y-6">
               {/* Balance Threshold Input */}

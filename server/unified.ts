@@ -1633,6 +1633,110 @@ app.post('/api/admin/players/bulk-balance', isAdmin, async (req, res) => {
   }
 })
 
+// Admin: Reset player account
+app.post('/api/admin/players/reset', isAdmin, async (req, res) => {
+  try {
+    const { username } = req.body
+
+    if (!username || !username.trim()) {
+      return res.status(400).json({ error: 'Username or FID is required' })
+    }
+
+    console.log(`🔄 [ADMIN] Reset player request for: ${username}`)
+
+    // Try to find player by username or FID
+    const usernameStr = username.trim()
+    const isNumeric = /^\d+$/.test(usernameStr)
+
+    let player
+    if (isNumeric) {
+      // Search by FID
+      const fid = parseInt(usernameStr)
+      const { data, error } = await supabase
+        .from('players')
+        .select('*')
+        .eq('farcaster_fid', fid)
+        .single()
+
+      if (error || !data) {
+        console.log(`❌ [ADMIN] Player not found with FID: ${fid}`)
+        return res.status(404).json({ error: `Player not found with FID: ${fid}` })
+      }
+      player = data
+    } else {
+      // Search by username
+      const { data, error } = await supabase
+        .from('players')
+        .select('*')
+        .eq('farcaster_username', usernameStr)
+        .single()
+
+      if (error || !data) {
+        console.log(`❌ [ADMIN] Player not found with username: ${usernameStr}`)
+        return res.status(404).json({ error: `Player not found with username: ${usernameStr}` })
+      }
+      player = data
+    }
+
+    const playerFid = player.farcaster_fid
+    console.log(`✅ [ADMIN] Player found - FID: ${playerFid}, Username: ${player.farcaster_username}`)
+
+    // Delete all positions (open and closed) for this player
+    const { data: deletedPositions, error: deleteError } = await supabase
+      .from('positions')
+      .delete()
+      .eq('player_fid', playerFid)
+      .select()
+
+    if (deleteError) {
+      console.error(`❌ [ADMIN] Error deleting positions:`, deleteError)
+      throw deleteError
+    }
+
+    const positionsDeleted = deletedPositions?.length || 0
+    console.log(`🗑️ [ADMIN] Deleted ${positionsDeleted} position(s)`)
+
+    // Reset player stats to initial values
+    const initialCash = 1000
+    const { error: updateError } = await supabase
+      .from('players')
+      .update({
+        cash: initialCash,
+        high_score: initialCash,
+        updated_at: Date.now()
+      })
+      .eq('farcaster_fid', playerFid)
+
+    if (updateError) {
+      console.error(`❌ [ADMIN] Error resetting player:`, updateError)
+      throw updateError
+    }
+
+    console.log(`✅ [ADMIN] Player reset complete - FID: ${playerFid}`)
+
+    // Broadcast position close event to update connected clients
+    wss.clients.forEach(client => {
+      if (client.readyState === 1) {
+        client.send(JSON.stringify({
+          type: 'player_reset',
+          player_fid: playerFid,
+          timestamp: Date.now()
+        }))
+      }
+    })
+
+    res.json({
+      success: true,
+      positions_deleted: positionsDeleted,
+      new_balance: initialCash,
+      message: `Successfully reset player ${player.farcaster_username} (FID: ${playerFid})`
+    })
+  } catch (error: any) {
+    console.error('❌ [ADMIN] Error resetting player:', error)
+    res.status(500).json({ error: error.message || 'Failed to reset player' })
+  }
+})
+
 // Admin: Get all config
 app.get('/api/admin/config', isAdmin, async (req, res) => {
   try {
