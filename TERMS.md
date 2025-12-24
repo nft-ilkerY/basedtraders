@@ -199,7 +199,7 @@ Upon termination:
 ## 18. Governing Law and Dispute Resolution
 
 ### 18.1 Governing Law
-These Terms shall be governed by and construed in accordance with the laws of [Your Jurisdiction], without regard to conflict of law principles.
+These Terms shall be governed by and construed in accordance with applicable law, without regard to conflict of law principles.
 
 ### 18.2 Dispute Resolution
 Any disputes arising from these Terms or the Platform shall be resolved through:
@@ -228,9 +228,7 @@ You may not assign or transfer your rights under these Terms without our consent
 
 ## 23. Contact Information
 
-For questions about these Terms, please contact us through:
-- GitHub: [Your GitHub Repository]
-- Email: [Your Contact Email]
+For questions about these Terms, please contact us through the Platform or via the GitHub repository where this project is hosted.
 
 ## 24. Acknowledgment
 
