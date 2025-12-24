@@ -1697,7 +1697,7 @@ app.post('/api/admin/players/reset', isAdmin, async (req, res) => {
     console.log(`🗑️ [ADMIN] Deleted ${positionsDeleted} position(s)`)
 
     // Reset player stats to initial values
-    const initialCash = 1000
+    const initialCash = 250
     const { error: updateError } = await supabase
       .from('players')
       .update({

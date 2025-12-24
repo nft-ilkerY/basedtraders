@@ -305,7 +305,7 @@ export default function AdminPanel({ fid }: AdminPanelProps) {
       return
     }
 
-    if (!confirm(`⚠️ WARNING: This will PERMANENTLY reset all data for player "${resetUsername}":\n\n• All positions (open & closed) will be deleted\n• Trading stats will be reset to 0\n• Balance will be reset to $1,000\n• P&L history will be erased\n\nThis action CANNOT be undone!\n\nAre you sure you want to continue?`)) {
+    if (!confirm(`⚠️ WARNING: This will PERMANENTLY reset all data for player "${resetUsername}":\n\n• All positions (open & closed) will be deleted\n• Trading stats will be reset to 0\n• Balance will be reset to $250\n• P&L history will be erased\n\nThis action CANNOT be undone!\n\nAre you sure you want to continue?`)) {
       return
     }
 
@@ -325,7 +325,7 @@ export default function AdminPanel({ fid }: AdminPanelProps) {
       const data = await response.json()
 
       if (response.ok) {
-        alert(`✅ Successfully reset player "${resetUsername}"!\n\nReset statistics:\n• Positions deleted: ${data.positions_deleted || 0}\n• Balance reset to: $${data.new_balance || 1000}\n• All stats cleared`)
+        alert(`✅ Successfully reset player "${resetUsername}"!\n\nReset statistics:\n• Positions deleted: ${data.positions_deleted || 0}\n• Balance reset to: $${data.new_balance || 250}\n• All stats cleared`)
         setResetUsername('')
       } else {
         alert(`❌ Error: ${data.error || 'Failed to reset player'}`)
@@ -832,7 +832,7 @@ export default function AdminPanel({ fid }: AdminPanelProps) {
                         <li>All open and closed positions</li>
                         <li>Trading history and statistics</li>
                         <li>Total volume, P&L, win rate</li>
-                        <li>Balance will be reset to $1,000</li>
+                        <li>Balance will be reset to $250</li>
                       </ul>
                       <strong className="block mt-2 text-red-400">This action CANNOT be undone!</strong>
                     </div>
