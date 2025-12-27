@@ -62,6 +62,10 @@ export default function Profile({ profile, isLoggedIn }: ProfileProps) {
     token: string
     profitPercent: number
   } | null>(null)
+  const [isSharing, setIsSharing] = useState(false)
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false)
+  const [imageGenerated, setImageGenerated] = useState(false)
+  const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null)
   const itemsPerPage = 20
 
   useEffect(() => {
@@ -455,6 +459,11 @@ export default function Profile({ profile, isLoggedIn }: ProfileProps) {
                             <button
                               onClick={() => {
                                 const profitPercent = (trade.pnl / (trade.size / trade.leverage)) * 100
+                                // Reset all sharing states
+                                setIsSharing(false)
+                                setIsGeneratingImage(false)
+                                setImageGenerated(false)
+                                setGeneratedImageUrl(null)
                                 setShareModal({
                                   show: true,
                                   profit: trade.pnl,
@@ -565,33 +574,110 @@ export default function Profile({ profile, isLoggedIn }: ProfileProps) {
 
               {/* Action Buttons */}
               <div className="space-y-3">
+                {/* Show Generate Image button first */}
+                {!imageGenerated && (
+                  <button
+                    onClick={async () => {
+                      try {
+                        setIsGeneratingImage(true)
+                        // Create share image with square format for Farcaster
+                        const response = await fetch('https://basedtraders.onrender.com/api/create-share-image', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            token: shareModal.token,
+                            leverage: shareModal.leverage,
+                            profit: shareModal.profit.toFixed(2),
+                            profitPercent: shareModal.profitPercent.toFixed(2),
+                            format: 'square'
+                          })
+                        })
+
+                        const data = await response.json()
+
+                        if (!data.success || !data.imageUrl) {
+                          throw new Error('Failed to create share image')
+                        }
+
+                        setGeneratedImageUrl(data.imageUrl)
+                        setImageGenerated(true)
+                        setIsGeneratingImage(false)
+                      } catch (error) {
+                        console.error('Failed to generate image:', error)
+                        setIsGeneratingImage(false)
+                      }
+                    }}
+                    disabled={isGeneratingImage}
+                    className="w-full bg-gradient-to-r from-[#0000FF] to-[#4444FF] hover:from-[#0000DD] hover:to-[#3333DD] text-white font-bold py-4 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg shadow-[#0000FF]/50 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2"
+                  >
+                    {isGeneratingImage && (
+                      <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    )}
+                    {isGeneratingImage ? 'Generating...' : 'Generate Image'}
+                  </button>
+                )}
+
+                {/* Show Share buttons after image is generated */}
+                {imageGenerated && generatedImageUrl && (
+                  <>
+                    <button
+                      onClick={async () => {
+                        try {
+                          setIsSharing(true)
+                          const miniappUrl = 'https://farcaster.xyz/miniapps/YgDPslIu3Xrt/basedtraders'
+                          const castText = `I just closed a ${shareModal.leverage}x ${shareModal.token} position on BasedTraders game with $${shareModal.profit.toFixed(2)} profit (+${shareModal.profitPercent.toFixed(1)}%)! Try it yourself and test your trading skills.\n\nMini App: ${miniappUrl}`
+
+                          await sdk.actions.composeCast({
+                            text: castText,
+                            embeds: [generatedImageUrl]
+                          })
+                          setShareModal(null)
+                          setIsSharing(false)
+                        } catch (error) {
+                          console.error('Failed to compose cast:', error)
+                          setIsSharing(false)
+                          setShareModal(null)
+                        }
+                      }}
+                      disabled={isSharing}
+                      className="w-full bg-gradient-to-r from-[#0000FF] to-[#4444FF] hover:from-[#0000DD] hover:to-[#3333DD] text-white font-bold py-4 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg shadow-[#0000FF]/50 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2"
+                    >
+                      {isSharing && (
+                        <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                      )}
+                      {isSharing ? 'Sharing...' : 'Share Cast'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        const sharePageUrl = `https://basedtraders.onrender.com/api/share-image?token=${encodeURIComponent(shareModal.token)}&leverage=${shareModal.leverage}&profit=${shareModal.profit.toFixed(2)}&profitPercent=${shareModal.profitPercent.toFixed(2)}&format=wide`
+                        const tweetText = `I just closed a ${shareModal.leverage}x ${shareModal.token} position with $${shareModal.profit.toFixed(2)} profit (+${shareModal.profitPercent.toFixed(1)}%) on @basedtradersapp (game 🎮)`
+                        const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent(sharePageUrl)}`
+                        window.open(tweetUrl, '_blank')
+                      }}
+                      className="w-full bg-gradient-to-r from-[#1DA1F2] to-[#0C85D0] hover:from-[#1A91DA] hover:to-[#0A75C2] text-white font-bold py-4 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg shadow-[#1DA1F2]/50 flex items-center justify-center gap-2"
+                    >
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                      </svg>
+                      Share on X
+                    </button>
+                  </>
+                )}
+
                 <button
-                  onClick={async () => {
-                    try {
-                      // Generate share image URL directly (no server request needed!)
-                      const imageUrl = `https://basetraders.vercel.app/api/share-image?token=${shareModal.token}&leverage=${shareModal.leverage}&profit=${shareModal.profit.toFixed(2)}&profitPercent=${shareModal.profitPercent.toFixed(2)}`
-                      const miniappUrl = 'https://farcaster.xyz/miniapps/YgDPslIu3Xrt/basedtraders'
-                      const castText = `🎯 Just closed a ${shareModal.leverage}x ${shareModal.token} position with +$${shareModal.profit.toFixed(2)} profit (+${shareModal.profitPercent.toFixed(1)}%) on @basedtraders! 💰\n\nThink you can do better?`
-
-                      console.log('📡 Sharing with Vercel OG image URL:', imageUrl)
-
-                      // Warpcast will fetch and cache the image from Vercel edge
-                      await sdk.actions.composeCast({
-                        text: castText,
-                        embeds: [imageUrl, miniappUrl]
-                      })
-                      setShareModal(null)
-                    } catch (error) {
-                      console.error('Failed to compose cast:', error)
-                      setShareModal(null)
-                    }
+                  onClick={() => {
+                    setIsSharing(false)
+                    setIsGeneratingImage(false)
+                    setImageGenerated(false)
+                    setGeneratedImageUrl(null)
+                    setShareModal(null)
                   }}
-                  className="w-full bg-gradient-to-r from-[#0000FF] to-[#4444FF] hover:from-[#0000DD] hover:to-[#3333DD] text-white font-bold py-4 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg shadow-[#0000FF]/50"
-                >
-                  Share Cast
-                </button>
-                <button
-                  onClick={() => setShareModal(null)}
                   className="w-full bg-gray-700/50 hover:bg-gray-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300"
                 >
                   Skip
