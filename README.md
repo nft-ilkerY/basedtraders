@@ -2,6 +2,11 @@
 
 A minimalistic leveraged trading game built on React + Vite with WalletConnect integration.
 
+## Screenshots
+
+![Screenshot 1](public/screenshot1.png)
+![Screenshot 2](public/screenshot2.png)
+
 ## Features
 
 - 🎮 **Real-time Trading**: Centralized price engine - same price for all users
